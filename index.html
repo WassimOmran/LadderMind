@@ -206,6 +206,20 @@ body::before{content:'';position:fixed;inset:0;
 .add-el-btn{width:22px;height:22px;border-radius:50%;border:1px dashed var(--b2);background:transparent;color:var(--t3);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .12s;margin:0 4px;}
 .add-el-btn:hover{border-color:var(--cyan);color:var(--cyan);}
 
+/* ── PARALLEL BRANCHES ── */
+.par-outer{display:flex;align-items:stretch;flex:1;min-width:0;}
+.par-vrail{width:3px;background:var(--cyan);box-shadow:0 0 6px rgba(0,212,255,.25);flex-shrink:0;border-radius:1px;transition:background .25s,box-shadow .25s;}
+.par-vrail.pw{background:var(--green);box-shadow:0 0 10px rgba(0,255,136,.4);}
+.par-stack{display:flex;flex-direction:column;flex:1;min-width:0;}
+.par-branch{display:flex;align-items:center;min-height:62px;position:relative;}
+.par-branch+.par-branch{border-top:1px solid rgba(0,212,255,.1);}
+.add-branch-btn{padding:2px 9px;font-family:var(--mono);font-size:9px;font-weight:700;background:transparent;border:1px dashed var(--b2);color:var(--t3);border-radius:2px;cursor:pointer;white-space:nowrap;flex-shrink:0;margin:0 6px;transition:all .12s;letter-spacing:.5px;}
+.add-branch-btn:hover{border-color:var(--green);color:var(--green);}
+.del-branch-btn{width:16px;height:16px;border-radius:50%;border:1px solid transparent;background:transparent;color:var(--t3);cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .12s;opacity:0;margin-right:2px;}
+.par-branch:hover .del-branch-btn{opacity:1;}
+.del-branch-btn:hover{border-color:var(--red);color:var(--red);background:rgba(255,68,88,.1);}
+.branch-label{font-family:var(--mono);font-size:7px;color:var(--t3);position:absolute;left:2px;top:2px;letter-spacing:.5px;opacity:.6;}
+
 /* ── CHAT ── */
 .chat{width:345px;flex-shrink:0;background:var(--s1);border-left:1px solid var(--b1);display:flex;flex-direction:column;}
 .chat-hdr{padding:11px 14px;border-bottom:1px solid var(--b1);display:flex;align-items:center;gap:8px;}
@@ -700,7 +714,16 @@ function mkElem(type, overrides = {}) {
 }
 
 function mkRung(elems = [], comment = '') {
-  return { id: uid(), comment, elements: elems, powered: false };
+  return { id: uid(), comment, branches: [elems], powered: false };
+}
+
+// ── Branch helpers ──
+const allBranchElems = r => (r.branches || [r.elements||[]]).flat();
+function normBranches(r) { if (!r.branches) { r.branches = [r.elements||[]]; delete r.elements; } return r; }
+function findInBranches(rung, eid) {
+  const br = rung.branches || [rung.elements||[]];
+  for (let bi = 0; bi < br.length; bi++) { const el = br[bi].find(e => e.id === eid); if (el) return {el, bi}; }
+  return null;
 }
 
 // ═══════════════════════════════════════════════════
@@ -764,6 +787,7 @@ function render() {
   container.innerHTML = '';
 
   rungs.forEach((rung, ri) => {
+    normBranches(rung);
     const pw = rung.powered && simActive;
     const wrap = document.createElement('div');
     wrap.className = 'rung-wrap' + (pw ? ' sim-on' : '');
@@ -787,10 +811,7 @@ function render() {
         <div class="rung-comment" contenteditable="true" data-rid="${rung.id}"
           onblur="saveComment('${rung.id}',this.innerText)">${esc(rung.comment)}</div>
         <div class="rung-elems" id="re_${rung.id}">
-          <div class="wire" style="width:8px;"></div>
-          ${rung.elements.map((el, ei) => renderElem(el, rung)).join('')}
-          <div class="wire fw ${pw ? 'pw' : ''}"></div>
-          <button class="add-el-btn" onclick="event.stopPropagation();openAddMenu('${rung.id}',event)" title="Add element">+</button>
+          ${renderBranches(rung, pw)}
         </div>
         <button class="del-rung" onclick="event.stopPropagation();delRungById('${rung.id}')" title="Delete rung">✕</button>
       </div>
@@ -805,6 +826,62 @@ function render() {
   });
 
   updStats();
+}
+
+function renderBranches(rung, pw) {
+  const id = rung.id;
+  const branches = rung.branches;
+  const multi = branches.length > 1;
+
+  if (!multi) {
+    // Single branch — flat layout (same as before)
+    const branch = branches[0];
+    return `<div class="wire" style="width:8px;"></div>
+      ${branch.map(el => renderElem(el, rung)).join('')}
+      <div class="wire fw ${pw ? 'pw' : ''}"></div>
+      <button class="add-el-btn" onclick="event.stopPropagation();openAddMenu('${id}',0,event)" title="Add element">+</button>
+      <button class="add-branch-btn" onclick="event.stopPropagation();addBranch('${id}')" title="Add parallel branch">⊕ Branch</button>`;
+  }
+
+  // Multi-branch parallel layout
+  const branchRows = branches.map((branch, bi) => {
+    const bpw = branch.length ? branch[branch.length-1]._pw && simActive : false;
+    const delBtn = bi > 0
+      ? `<button class="del-branch-btn" onclick="event.stopPropagation();delBranch('${id}',${bi})" title="Remove branch">✕</button>`
+      : '';
+    return `<div class="par-branch" data-bi="${bi}">
+      ${bi > 0 ? `<span class="branch-label">B${bi+1}</span>` : ''}
+      <div class="wire" style="width:6px;"></div>
+      ${branch.map(el => renderElem(el, rung)).join('')}
+      <div class="wire fw ${bpw ? 'pw' : ''}"></div>
+      <button class="add-el-btn" onclick="event.stopPropagation();openAddMenu('${id}',${bi},event)" title="Add element to this branch">+</button>
+      ${delBtn}
+    </div>`;
+  }).join('');
+
+  return `<div class="wire" style="width:6px;"></div>
+    <div class="par-outer">
+      <div class="par-vrail ${pw ? 'pw' : ''}"></div>
+      <div class="par-stack">${branchRows}</div>
+      <div class="par-vrail ${pw ? 'pw' : ''}"></div>
+    </div>
+    <div class="wire" style="width:6px;"></div>
+    <button class="add-branch-btn" onclick="event.stopPropagation();addBranch('${id}')" title="Add parallel branch">⊕ Branch</button>`;
+}
+
+function addBranch(rungId) {
+  const r = rungs.find(r => r.id === rungId);
+  if (!r) return;
+  normBranches(r);
+  r.branches.push([]);
+  render();
+}
+
+function delBranch(rungId, bi) {
+  const r = rungs.find(r => r.id === rungId);
+  if (!r || !r.branches || r.branches.length <= 1) return;
+  r.branches.splice(bi, 1);
+  render();
 }
 
 function renderElem(el, rung) {
@@ -941,7 +1018,7 @@ function renderElem(el, rung) {
 
 function updStats() {
   document.getElementById('sc-rungs').textContent = rungs.length;
-  document.getElementById('sc-elems').textContent = rungs.reduce((a,r) => a + r.elements.length, 0);
+  document.getElementById('sc-elems').textContent = rungs.reduce((a,r) => a + allBranchElems(r).length, 0);
 }
 
 // ═══════════════════════════════════════════════════
@@ -970,7 +1047,9 @@ function dupRung() {
   const src = rungs.find(r => r.id === selRungId);
   if (!src) return;
   const copy = JSON.parse(JSON.stringify(src));
-  copy.id = uid(); copy.elements.forEach(e => { e.id = uid(); e._pw = false; });
+  normBranches(copy);
+  copy.id = uid();
+  copy.branches.forEach(br => br.forEach(e => { e.id = uid(); e._pw = false; }));
   const i = rungs.findIndex(r => r.id === selRungId);
   rungs.splice(i + 1, 0, copy); render();
 }
@@ -985,30 +1064,25 @@ function saveComment(rid, txt) {
 // ═══════════════════════════════════════════════════
 //  ELEMENT CRUD
 // ═══════════════════════════════════════════════════
-function openAddMenu(rungId, evt) {
+function openAddMenu(rungId, branchIdx, evt) {
   document.querySelectorAll('.ctx-menu').forEach(m => m.remove());
-  const types = TB_GROUPS.flatMap(g => g.items).map(i => [i.type, i.label, i.color]);
   const menu = document.createElement('div');
   menu.className = 'ctx-menu';
   menu.style.cssText = `position:fixed;z-index:999;background:var(--s1);border:1px solid var(--b2);border-radius:4px;padding:5px;min-width:170px;max-height:360px;overflow-y:auto;box-shadow:0 10px 36px rgba(0,0,0,.6);`;
   menu.style.left = Math.min(evt.clientX, window.innerWidth - 185) + 'px';
   menu.style.top = Math.min(evt.clientY - 10, window.innerHeight - 380) + 'px';
-  let curGroup = '';
   TB_GROUPS.forEach(g => {
     const hdr = document.createElement('div');
     hdr.style.cssText = 'padding:4px 10px 2px;font-size:8px;font-weight:700;letter-spacing:2px;color:var(--t3);text-transform:uppercase;';
     hdr.textContent = g.name;
     menu.appendChild(hdr);
-    g.items.forEach(([t, label, color] = []) => {
-      const [type, lbl, col] = [g.items.find(x => x), null, null];
-    });
     g.items.forEach(item => {
       const d = document.createElement('div');
       d.style.cssText = 'padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;border-radius:2px;color:var(--t2);transition:all .1s;display:flex;align-items:center;gap:8px;';
       d.innerHTML = `<span style="color:${item.color};font-family:var(--mono);font-size:9px;min-width:36px;">${item.sub.slice(0,8)}</span><span>${item.label}</span>`;
       d.onmouseenter = () => { d.style.background = 'var(--s3)'; d.style.color = 'var(--bright)'; };
       d.onmouseleave = () => { d.style.background = ''; d.style.color = 'var(--t2)'; };
-      d.onclick = () => { insertElem(item.type, rungId); menu.remove(); };
+      d.onclick = () => { insertElem(item.type, rungId, branchIdx); menu.remove(); };
       menu.appendChild(d);
     });
   });
@@ -1016,19 +1090,27 @@ function openAddMenu(rungId, evt) {
   setTimeout(() => { const cls = e => { if (!menu.contains(e.target)) { menu.remove(); document.removeEventListener('click', cls); } }; document.addEventListener('click', cls); }, 10);
 }
 
-function insertElem(type, rungId) {
+function insertElem(type, rungId, branchIdx) {
   rungId = rungId || selRungId;
   if (!rungId) { addRung(); rungId = rungs[rungs.length - 1].id; }
   const r = rungs.find(r => r.id === rungId);
   if (!r) return;
-  r.elements.push(mkElem(type));
+  normBranches(r);
+  const bi = branchIdx ?? 0;
+  if (!r.branches[bi]) r.branches[bi] = [];
+  r.branches[bi].push(mkElem(type));
   render();
 }
 
 function delElem() {
   if (!selElemId || !selRungId) return;
   const r = rungs.find(r => r.id === selRungId);
-  if (r) { r.elements = r.elements.filter(e => e.id !== selElemId); selElemId = null; render(); }
+  if (!r) return;
+  normBranches(r);
+  for (let bi = 0; bi < r.branches.length; bi++) {
+    const idx = r.branches[bi].findIndex(e => e.id === selElemId);
+    if (idx !== -1) { r.branches[bi].splice(idx, 1); selElemId = null; render(); return; }
+  }
 }
 
 // ═══════════════════════════════════════════════════
@@ -1038,8 +1120,10 @@ function openEditPop(eid, rid, evt) {
   document.querySelectorAll('.epop').forEach(p => p.remove());
   const r = rungs.find(r => r.id === rid);
   if (!r) return;
-  const el = r.elements.find(e => e.id === eid);
-  if (!el) return;
+  normBranches(r);
+  const found = findInBranches(r, eid);
+  if (!found) return;
+  const el = found.el;
 
   const pop = document.createElement('div');
   pop.className = 'epop';
@@ -1094,8 +1178,10 @@ function buildEditFields(el) {
 function saveEditPop(eid, rid) {
   const r = rungs.find(r => r.id === rid);
   if (!r) return;
-  const el = r.elements.find(e => e.id === eid);
-  if (!el) return;
+  normBranches(r);
+  const found = findInBranches(r, eid);
+  if (!found) return;
+  const el = found.el;
   const g = id => { const e = document.getElementById('ep_' + id); return e ? e.value : null; };
   ['label','addr','name','pt','pv','s','r','in1','in2','in','out','min','max','val','n','count','sp','period','duty'].forEach(k => {
     const v = g(k); if (v !== null) el[k] = ['pv','n','count'].includes(k) ? (parseInt(v)||0) : v;
@@ -1107,7 +1193,12 @@ function saveEditPop(eid, rid) {
 function delElemFromPop(eid, rid) {
   closeEditPop();
   const r = rungs.find(r => r.id === rid);
-  if (r) { r.elements = r.elements.filter(e => e.id !== eid); selElemId = null; render(); }
+  if (!r) return;
+  normBranches(r);
+  for (let bi = 0; bi < r.branches.length; bi++) {
+    const idx = r.branches[bi].findIndex(e => e.id === eid);
+    if (idx !== -1) { r.branches[bi].splice(idx, 1); selElemId = null; render(); return; }
+  }
 }
 
 function closeEditPop() { document.querySelectorAll('.epop').forEach(p => p.remove()); }
@@ -1163,7 +1254,7 @@ function toggleSim() {
     addMsg('ai','🟢 <strong>Simulator active.</strong> Switch to the Simulator tab to toggle inputs and watch logic flow live.');
     simLoop();
   } else {
-    rungs.forEach(r => { r.powered = false; r.elements.forEach(e => e._pw = false); });
+    rungs.forEach(r => { r.powered = false; allBranchElems(r).forEach(e => e._pw = false); });
     render();
   }
 }
@@ -1177,33 +1268,39 @@ function simLoop() {
 function evalLogic() {
   const tags = { ...simInputs };
   rungs.forEach(rung => {
-    let pwr = true;
-    rung.elements.forEach(el => {
-      if (el.t === 'contact') {
-        const state = !!tags[el.label];
-        const pass = el.sub === 'nc' ? !state : state;
-        el._pw = pwr && pass; pwr = pwr && pass;
-      } else if (el.t === 'coil') {
-        el._pw = pwr;
-        if (pwr) {
-          if (el.sub === 'out') tags[el.label] = true;
-          else if (el.sub === 'set') tags[el.label] = true;
-          else if (el.sub === 'res') tags[el.label] = false;
+    normBranches(rung);
+    // Evaluate each branch independently (parallel = OR logic)
+    let rungPwr = false;
+    rung.branches.forEach(branch => {
+      let pwr = true;
+      branch.forEach(el => {
+        if (el.t === 'contact') {
+          const state = !!tags[el.label];
+          const pass = el.sub === 'nc' ? !state : state;
+          el._pw = pwr && pass; pwr = pwr && pass;
+        } else if (el.t === 'coil') {
+          el._pw = pwr;
+          if (pwr) {
+            if (el.sub === 'out') tags[el.label] = true;
+            else if (el.sub === 'set') tags[el.label] = true;
+            else if (el.sub === 'res') tags[el.label] = false;
+          }
+        } else if (el.t === 'ff') {
+          const s = !!tags[el.s], r2 = !!tags[el.r];
+          el._pw = pwr;
+          if (pwr) {
+            if (el.sub === 'sr') { if (s) tags[el.addr] = true; if (r2 && !s) tags[el.addr] = false; }
+            else { if (r2) tags[el.addr] = false; if (s && !r2) tags[el.addr] = true; }
+          }
+        } else if (el.t === 'special' && el.sub === 'not') {
+          el._pw = pwr; pwr = !pwr;
+        } else {
+          el._pw = pwr;
         }
-      } else if (el.t === 'ff') {
-        const s = !!tags[el.s], r2 = !!tags[el.r];
-        el._pw = pwr;
-        if (pwr) {
-          if (el.sub === 'sr') { if (s) tags[el.addr] = true; if (r2 && !s) tags[el.addr] = false; }
-          else { if (r2) tags[el.addr] = false; if (s && !r2) tags[el.addr] = true; }
-        }
-      } else if (el.t === 'special' && el.sub === 'not') {
-        el._pw = pwr; pwr = !pwr;
-      } else {
-        el._pw = pwr;
-      }
+      });
+      if (pwr) rungPwr = true; // OR: any branch powered = rung powered
     });
-    rung.powered = pwr;
+    rung.powered = rungPwr;
   });
 }
 
@@ -1229,7 +1326,7 @@ function switchTab(tab) {
 // ── Simulator View ──
 function buildSimView() {
   const tags = {};
-  rungs.forEach(r => r.elements.forEach(el => {
+  rungs.forEach(r => allBranchElems(r).forEach(el => {
     if (el.t === 'contact') tags[el.label] = el.addr || '';
   }));
   const grid = document.getElementById('simGrid');
@@ -1271,7 +1368,7 @@ function toggleSimTag(lbl) {
 // ── Tag Table ──
 function buildTagTable() {
   const tags = {};
-  rungs.forEach((r, ri) => r.elements.forEach(el => {
+  rungs.forEach((r, ri) => allBranchElems(r).forEach(el => {
     const keys = [];
     if (el.t === 'contact' || el.t === 'coil') keys.push({ k: el.label, a: el.addr || '—', type: el.t === 'contact' ? `${el.sub.toUpperCase()} Contact` : `${el.sub.toUpperCase()} Coil` });
     if (el.t === 'timer')   keys.push({ k: el.name, a: 'IDB', type: `${el.sub} Timer` });
@@ -1339,7 +1436,7 @@ function loadTpl(key) {
 // ═══════════════════════════════════════════════════
 //  TEMPLATE PROGRAMS
 // ═══════════════════════════════════════════════════
-const mk = (comment, elements) => ({ id: uid(), comment, elements, powered: false });
+const mk = (comment, elements) => ({ id: uid(), comment, branches: [elements], powered: false });
 
 const TPL_PROGRAMS = {
   motorStarter: () => ({ name:'Motor Starter', desc:'Seal-in circuit with overload protection.', rungs:[
@@ -1481,7 +1578,7 @@ function hideTyping() { document.getElementById('typingEl')?.remove(); }
 function buildProgramContext() {
   if (!rungs.length) return '';
   const lines = rungs.map((r, i) => {
-    const els = r.elements.map(e => {
+    const els = allBranchElems(r).map(e => {
       if (e.t === 'contact') return `${e.sub.toUpperCase()}Contact(${e.label}|${e.addr})`;
       if (e.t === 'coil')    return `${e.sub.toUpperCase()}Coil(${e.label}|${e.addr})`;
       if (e.t === 'timer')   return `${e.sub}(${e.name},PT=${e.pt})`;
@@ -1581,14 +1678,14 @@ async function sendChat() {
     if (parsed?.rungs?.length) {
       const newRungs = parsed.rungs.map(r => {
         const rung = mk(r.comment || '', []);
-        rung.elements = (r.elements || []).map(el => {
+        rung.branches = [(r.elements || r.branches?.[0] || []).map(el => {
           const key = el.t === 'contact'
             ? (el.sub === 'nc' ? 'contact-nc' : el.sub === 'pos' ? 'contact-pos' : el.sub === 'neg' ? 'contact-neg' : 'contact-no')
             : el.t === 'coil'
             ? (el.sub === 'set' ? 'coil-set' : el.sub === 'res' ? 'coil-reset' : el.sub === 'pos' ? 'coil-pos' : el.sub === 'neg' ? 'coil-neg' : 'coil-out')
             : (el.sub?.toLowerCase() || el.t || 'contact-no');
           return { ...mkElem(key), ...el, id: uid() };
-        });
+        })];
         return rung;
       });
       rungs = [...rungs, ...newRungs];
