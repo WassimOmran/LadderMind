@@ -532,6 +532,7 @@ body::before{content:'';position:fixed;inset:0;
       <button class="qb" onclick="qk('Traffic light with green 30s yellow 5s red 30s IEC timers')">Traffic Light</button>
       <button class="qb" onclick="qk('Pneumatic cylinder extend dwell retract with position sensors')">Pneumatic Cyl</button>
       <button class="qb" onclick="qk('SR flip-flop latching relay for motor control')">SR Flip-Flop</button>
+      <button class="qb" onclick="qk('1 second on 1 second off blink clock using two cross-wired TON timers')">Blink Clock</button>
     </div>
     <div class="img-preview-wrap" id="imgPreviewWrap">
       <img id="imgPreview" class="img-preview" src="" alt=""/>
@@ -2063,6 +2064,7 @@ const TEMPLATES = [
   { key:'pidTemp',       name:'PID Temperature Ctrl',   cat:'PID',      col:'#ff4458', desc:'PID_Compact FB with analog input, heater coil, overtemp NC contact safety.',              rungs:3 },
   { key:'math',          name:'Math + Compare',         cat:'Math',     col:'#00e5cc', desc:'ADD two analog inputs, CMP >= threshold, MOVE result to output register.',                rungs:4 },
   { key:'dataMove',      name:'MOVE + CONV',            cat:'Data',     col:'#00d4ff', desc:'INT_TO_REAL conversion, MOVE to HMI tag, compare with REAL setpoint.',                    rungs:3 },
+  { key:'blinkClock',    name:'Blink / Clock (1s/1s)',  cat:'Timing',   col:'#a78bfa', desc:'Proper 50% duty-cycle blink using two cross-wired TON timers. T_ON.Q is HIGH 1s, LOW 1s.',rungs:3 },
 ];
 
 function buildTemplates() {
@@ -2168,6 +2170,11 @@ const TPL_PROGRAMS = {
     mk('// MOVE converted value to HMI tag', [mkElem('contact-no',{label:'Conv_Enable',addr:'%M11.0'}), mkElem('move',{in:'AI_Real_Value',out:'HMI_Analog_Display'})]),
     mk('// Compare REAL value with REAL setpoint', [mkElem('contact-no',{label:'Conv_Enable',addr:'%M11.0'}), mkElem('cmp-ge',{in1:'AI_Real_Value',in2:'Setpoint_Real'})]),
   ]}),
+  blinkClock: () => ({ name:'Blink / Clock (1s ON / 1s OFF)', desc:'50% duty-cycle oscillator using two cross-wired TON timers.', rungs:[
+    mk('// T_ON phase — runs while T_OFF has NOT completed yet (T_OFF.Q=false)', [mkElem('contact-nc',{label:'T_OFF.Q',addr:'%DB20.DBX1.0'}), mkElem('ton',{name:'T_ON',pt:'T#1S',et:'T#0S'})]),
+    mk('// T_OFF phase — starts when T_ON has completed (T_ON.Q=true)', [mkElem('contact-no',{label:'T_ON.Q',addr:'%DB20.DBX0.0'}), mkElem('ton',{name:'T_OFF',pt:'T#1S',et:'T#0S'})]),
+    mk('// Blink output — HIGH during T_ON done phase (1s ON)', [mkElem('contact-no',{label:'T_ON.Q',addr:'%DB20.DBX0.0'}), mkElem('coil-out',{label:'Blink_Out',addr:'%Q20.0'})]),
+  ]}),
 };
 
 // ═══════════════════════════════════════════════════
@@ -2230,21 +2237,35 @@ function hideTyping() { document.getElementById('typingEl')?.remove(); }
 // ── Build program context to inject into prompt ──
 function buildProgramContext() {
   if (!rungs.length) return '';
+  // Format a single cell to a short text token
+  function fmtEl(e) {
+    if (!e || e._group) return e?._group ? `[GROUP:${(e.branches||[]).map(b=>b.map(fmtEl).join('→')).join('||')}]` : '?';
+    if (e.t === 'contact') return `${e.sub.toUpperCase()}(${e.label||e.addr||'?'})`;
+    if (e.t === 'coil')    return `Coil_${e.sub.toUpperCase()}(${e.label||e.addr||'?'})`;
+    if (e.t === 'timer')   return `${e.sub}(${e.name},PT=${e.pt})`;
+    if (e.t === 'counter') return `${e.sub}(${e.name},PV=${e.pv})`;
+    if (e.t === 'cmp')     return `CMP_${e.sub}(${e.in1},${e.in2})`;
+    if (e.t === 'math')    return `${e.sub}(${e.in1||e.in},${e.in2||''}→${e.out})`;
+    if (e.t === 'move')    return `MOVE(${e.in}→${e.out})`;
+    if (e.t === 'conv')    return `${e.sub}(${e.in}→${e.out})`;
+    if (e.t === 'word')    return `${e.sub}(${e.in1},${e.in2}→${e.out})`;
+    if (e.t === 'ctrl')    return `${e.sub}(SP=${e.sp||''},PV=${e.pv||''})`;
+    if (e.t === 'ff')      return `${e.sub.toUpperCase()}(S=${e.s},R=${e.r})`;
+    return e.sub || e.t;
+  }
   const lines = rungs.map((r, i) => {
-    const els = allBranchElems(r).map(e => {
-      if (e.t === 'contact') return `${e.sub.toUpperCase()}Contact(${e.label}|${e.addr})`;
-      if (e.t === 'coil')    return `${e.sub.toUpperCase()}Coil(${e.label}|${e.addr})`;
-      if (e.t === 'timer')   return `${e.sub}(${e.name},PT=${e.pt})`;
-      if (e.t === 'counter') return `${e.sub}(${e.name},PV=${e.pv})`;
-      if (e.t === 'cmp')     return `CMP_${e.sub}(${e.in1},${e.in2})`;
-      if (e.t === 'math')    return `${e.sub}(${e.in1||e.in},${e.in2||''}→${e.out})`;
-      if (e.t === 'move')    return `${e.sub}(${e.in}→${e.out})`;
-      if (e.t === 'ctrl')    return `${e.sub}(${e.sp||e.label||''})`;
-      return e.sub || e.t;
-    }).join(' ➜ ');
-    return `  [${String(i).padStart(3,'0')}] ${r.comment||''} | ${els}`;
+    normBranches(r);
+    const pre  = (r.pre  ||[]).map(fmtEl);
+    const post = (r.post ||[]).map(fmtEl);
+    const branches = r.branches.map(b => b.map(fmtEl).join('→'));
+    let logic = pre.join('→');
+    if (logic && branches.some(b => b)) logic += '→';
+    if (branches.length === 1) logic += branches[0];
+    else logic += '[' + branches.join('||') + ']';
+    if (post.length) logic += '→' + post.join('→');
+    return `  [${String(i).padStart(3,'0')}] ${r.comment||''}\n        LOGIC: ${logic}`;
   }).join('\n');
-  return `\n\n=== OPEN PROGRAM (${rungs.length} rungs) ===\n${lines}\n=== END ===`;
+  return `\n\n=== OPEN PROGRAM (${rungs.length} rungs, || = parallel branch) ===\n${lines}\n=== END ===`;
 }
 
 // ── System prompt ──
@@ -2254,7 +2275,18 @@ Your personality: Direct, opinionated, passionate about engineering excellence. 
 
 === WHEN GENERATING LADDER LOGIC ===
 Respond ONLY with this JSON (no markdown fences, no extra text before or after):
-{"reply":"explanation with pro tips","rungs":[{"comment":"// Network description","elements":[...]}]}
+{"reply":"explanation with pro tips","rungs":[{"comment":"// Network description","branches":[[...]],"pre":[...],"post":[...]}]}
+
+RUNG STRUCTURE:
+- "branches": REQUIRED — array of branch arrays. Series rungs have exactly ONE branch: "branches":[[elem,elem,elem]]. Parallel rungs have MULTIPLE branches: "branches":[[elem,elem],[elem,elem]].  Logic: ANY branch TRUE = rung powered (OR logic across branches).
+- "pre": OPTIONAL — series elements evaluated BEFORE the parallel fork. e.g. permissive contacts shared by all branches.
+- "post": OPTIONAL — series elements evaluated AFTER all branches merge. e.g. shared output coils or timers.
+
+PARALLEL EXAMPLE (Start_PB OR Seal-in contact, then Motor coil):
+  {"comment":"// Motor seal-in circuit","pre":[{"t":"contact","sub":"nc","label":"Stop_PB","addr":"%I0.1"}],"branches":[[{"t":"contact","sub":"no","label":"Start_PB","addr":"%I0.0"}],[{"t":"contact","sub":"no","label":"Motor_Run","addr":"%Q0.0"}]],"post":[{"t":"coil","sub":"out","label":"Motor_Run","addr":"%Q0.0"}]}
+
+SERIES EXAMPLE (no parallel needed):
+  {"comment":"// Fault alarm","branches":[[{"t":"contact","sub":"no","label":"Fault","addr":"%M0.1"},{"t":"coil","sub":"out","label":"Alarm","addr":"%Q0.1"}]]}
 
 Element schema:
 {"t":"contact","sub":"no"|"nc"|"pos"|"neg","label":"Tag","addr":"%I0.0"}
@@ -2270,6 +2302,11 @@ Element schema:
 {"t":"ctrl","sub":"PID_Compact","sp":"SP","pv":"PV","out":"Out"}
 
 Tag rules: PascalCase. %Ix.x = inputs, %Qx.x = outputs, %Mx.x = markers, T#xS = time. Always lead with a safety E-Stop NC contact on any machine control network.
+
+BLINK / CLOCK (1s ON / 1s OFF — 50% duty cycle): Use TWO cross-wired TON timers. NEVER use a single self-resetting TON (it produces only a 1-scan pulse, not 50% duty cycle):
+  Rung 1: "branches":[[NC(T_OFF.Q), TON T_ON PT=T#1S]]   ← T_ON runs while T_OFF is idle
+  Rung 2: "branches":[[NO(T_ON.Q), TON T_OFF PT=T#1S]]   ← T_OFF runs when T_ON completes
+  Rung 3: "branches":[[NO(T_ON.Q), Coil Blink_Out]]      ← Output HIGH during T_ON done phase
 
 === WHEN ANALYZING AN IMAGE ===
 Identify every ladder element and network, explain the full program logic, flag any safety issues, race conditions, scan-time problems, or inefficiencies, and give specific TIA Portal improvements.
@@ -2329,16 +2366,21 @@ async function sendChat() {
     if (jsonMatch) { try { parsed = JSON.parse(jsonMatch[0]); } catch { parsed = null; } }
 
     if (parsed?.rungs?.length) {
+      const mapEl = el => {
+        const key = el.t === 'contact'
+          ? (el.sub === 'nc' ? 'contact-nc' : el.sub === 'pos' ? 'contact-pos' : el.sub === 'neg' ? 'contact-neg' : 'contact-no')
+          : el.t === 'coil'
+          ? (el.sub === 'set' ? 'coil-set' : el.sub === 'res' ? 'coil-reset' : el.sub === 'pos' ? 'coil-pos' : el.sub === 'neg' ? 'coil-neg' : 'coil-out')
+          : (el.sub?.toLowerCase() || el.t || 'contact-no');
+        return { ...mkElem(key), ...el, id: uid() };
+      };
       const newRungs = parsed.rungs.map(r => {
         const rung = mk(r.comment || '', []);
-        rung.branches = [(r.elements || r.branches?.[0] || []).map(el => {
-          const key = el.t === 'contact'
-            ? (el.sub === 'nc' ? 'contact-nc' : el.sub === 'pos' ? 'contact-pos' : el.sub === 'neg' ? 'contact-neg' : 'contact-no')
-            : el.t === 'coil'
-            ? (el.sub === 'set' ? 'coil-set' : el.sub === 'res' ? 'coil-reset' : el.sub === 'pos' ? 'coil-pos' : el.sub === 'neg' ? 'coil-neg' : 'coil-out')
-            : (el.sub?.toLowerCase() || el.t || 'contact-no');
-          return { ...mkElem(key), ...el, id: uid() };
-        })];
+        // Support both old flat "elements" and new "branches" schema from AI
+        const rawBranches = (r.branches?.length) ? r.branches : [r.elements || []];
+        rung.branches = rawBranches.map(branch => (Array.isArray(branch) ? branch : []).map(mapEl));
+        rung.pre  = (r.pre  || []).map(mapEl);
+        rung.post = (r.post || []).map(mapEl);
         return rung;
       });
       rungs = [...rungs, ...newRungs];
