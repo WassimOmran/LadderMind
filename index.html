@@ -213,8 +213,8 @@ body::before{content:'';position:fixed;inset:0;
 .par-stack{display:flex;flex-direction:column;flex:1;min-width:0;}
 .par-branch{display:flex;align-items:center;min-height:62px;position:relative;}
 .par-branch+.par-branch{border-top:1px solid rgba(0,212,255,.1);}
-.add-branch-btn{padding:2px 9px;font-family:var(--mono);font-size:9px;font-weight:700;background:transparent;border:1px dashed var(--b2);color:var(--t3);border-radius:2px;cursor:pointer;white-space:nowrap;flex-shrink:0;margin:0 6px;transition:all .12s;letter-spacing:.5px;}
-.add-branch-btn:hover{border-color:var(--green);color:var(--green);}
+.add-branch-btn{padding:3px 10px;font-family:var(--mono);font-size:9px;font-weight:700;background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.3);color:var(--green);border-radius:2px;cursor:pointer;white-space:nowrap;flex-shrink:0;margin:0 6px;transition:all .12s;letter-spacing:.5px;}
+.add-branch-btn:hover{background:rgba(0,255,136,.14);border-color:var(--green);box-shadow:0 0 8px rgba(0,255,136,.2);}
 .del-branch-btn{width:16px;height:16px;border-radius:50%;border:1px solid transparent;background:transparent;color:var(--t3);cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .12s;opacity:0;margin-right:2px;}
 .par-branch:hover .del-branch-btn{opacity:1;}
 .del-branch-btn:hover{border-color:var(--red);color:var(--red);background:rgba(255,68,88,.1);}
@@ -480,6 +480,7 @@ body::before{content:'';position:fixed;inset:0;
       <button class="edbtn danger" onclick="delElem()">✕ Elem</button>
       <div class="ed-sep"></div>
       <button class="edbtn" onclick="toggleSim()">▶ Simulate</button>
+      <button class="edbtn" onclick="addBranch(selRungId)" title="Add a parallel OR branch to selected rung">⊕ Branch</button>
       <button class="edbtn" onclick="switchTab('tagtable')">Tag Table</button>
       <div class="ed-stats">Rungs: <b id="sc-rungs">0</b> &nbsp; Elements: <b id="sc-elems">0</b></div>
     </div>
@@ -1011,10 +1012,12 @@ function renderBranches(rung, pw) {
 }
 
 function addBranch(rungId) {
+  rungId = rungId || selRungId || (rungs[0] && rungs[0].id);
   const r = rungs.find(r => r.id === rungId);
-  if (!r) return;
+  if (!r) { addMsg('ai', '⚠️ Select a rung first, then click <strong>⊕ Branch</strong> to add a parallel branch.'); return; }
   normBranches(r);
   r.branches.push([]);
+  selRungId = rungId;
   render();
 }
 
@@ -1354,9 +1357,15 @@ function rdragStart(e) {
   e.dataTransfer.effectAllowed = 'move';
 }
 function rdragOver(e) {
-  if (!dragSrcId || tbDragType) return;
-  e.preventDefault(); e.dataTransfer.dropEffect = 'move';
   const w = e.currentTarget;
+  if (tbDragType) {
+    // Toolbox item being dragged over a rung — allow drop
+    e.preventDefault(); e.dataTransfer.dropEffect = 'copy';
+    w.classList.add('dv-top'); // reuse highlight style as drop indicator
+    return;
+  }
+  if (!dragSrcId) return;
+  e.preventDefault(); e.dataTransfer.dropEffect = 'move';
   if (w.dataset.id === dragSrcId) return;
   w.classList.remove('dv-top','dv-bot');
   const mid = w.getBoundingClientRect().top + w.getBoundingClientRect().height / 2;
@@ -1364,10 +1373,17 @@ function rdragOver(e) {
 }
 function rdragLeave(e) { e.currentTarget.classList.remove('dv-top','dv-bot'); }
 function rdragDrop(e) {
-  if (!dragSrcId || tbDragType) return;
   e.preventDefault();
   const tgt = e.currentTarget;
   tgt.classList.remove('dv-top','dv-bot');
+  if (tbDragType) {
+    // Drop toolbox item onto this rung
+    const rungId = tgt.dataset.id;
+    if (rungId) insertElem(tbDragType, rungId, 0);
+    tbDragType = null;
+    return;
+  }
+  if (!dragSrcId) return;
   const si = rungs.findIndex(r => r.id === dragSrcId);
   const di = rungs.findIndex(r => r.id === tgt.dataset.id);
   if (si === -1 || di === -1 || si === di) return;
