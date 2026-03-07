@@ -973,10 +973,18 @@ function render() {
 function renderBranches(rung, pw) {
   const id = rung.id;
   const branches = rung.branches;
+  const post = rung.post || [];
   const multi = branches.length > 1;
 
+  // Shared post-section HTML (elements after the merge point)
+  const postHtml = multi ? `
+    <div class="wire" style="width:6px;"></div>
+    ${post.map(el => renderElem(el, rung)).join('')}
+    <div class="wire fw ${pw ? 'pw' : ''}"></div>
+    <button class="add-el-btn" onclick="event.stopPropagation();openAddMenu('${id}','post',event)" title="Add shared output (after merge)">+</button>` : '';
+
   if (!multi) {
-    // Single branch — flat layout (same as before)
+    // Single branch — flat layout
     const branch = branches[0];
     return `<div class="wire" style="width:8px;"></div>
       ${branch.map(el => renderElem(el, rung)).join('')}
@@ -1007,7 +1015,7 @@ function renderBranches(rung, pw) {
       <div class="par-stack">${branchRows}</div>
       <div class="par-vrail ${pw ? 'pw' : ''}"></div>
     </div>
-    <div class="wire" style="width:6px;"></div>
+    ${postHtml}
     <button class="add-branch-btn" onclick="event.stopPropagation();addBranch('${id}')" title="Add parallel branch">⊕ Branch</button>`;
 }
 
@@ -1194,6 +1202,7 @@ function dupRung() {
   normBranches(copy);
   copy.id = uid();
   copy.branches.forEach(br => br.forEach(e => { e.id = uid(); e._pw = false; }));
+  copy.post.forEach(e => { e.id = uid(); e._pw = false; });
   const i = rungs.findIndex(r => r.id === selRungId);
   rungs.splice(i + 1, 0, copy); render();
 }
@@ -1240,9 +1249,13 @@ function insertElem(type, rungId, branchIdx) {
   const r = rungs.find(r => r.id === rungId);
   if (!r) return;
   normBranches(r);
-  const bi = branchIdx ?? 0;
-  if (!r.branches[bi]) r.branches[bi] = [];
-  r.branches[bi].push(mkElem(type));
+  if (branchIdx === 'post') {
+    r.post.push(mkElem(type));
+  } else {
+    const bi = branchIdx ?? 0;
+    if (!r.branches[bi]) r.branches[bi] = [];
+    r.branches[bi].push(mkElem(type));
+  }
   render();
 }
 
@@ -1251,6 +1264,9 @@ function delElem() {
   const r = rungs.find(r => r.id === selRungId);
   if (!r) return;
   normBranches(r);
+  // Check post section first
+  const pi = r.post.findIndex(e => e.id === selElemId);
+  if (pi !== -1) { r.post.splice(pi, 1); selElemId = null; render(); return; }
   for (let bi = 0; bi < r.branches.length; bi++) {
     const idx = r.branches[bi].findIndex(e => e.id === selElemId);
     if (idx !== -1) { r.branches[bi].splice(idx, 1); selElemId = null; render(); return; }
@@ -1339,6 +1355,8 @@ function delElemFromPop(eid, rid) {
   const r = rungs.find(r => r.id === rid);
   if (!r) return;
   normBranches(r);
+  const pi = r.post.findIndex(e => e.id === eid);
+  if (pi !== -1) { r.post.splice(pi, 1); selElemId = null; render(); return; }
   for (let bi = 0; bi < r.branches.length; bi++) {
     const idx = r.branches[bi].findIndex(e => e.id === eid);
     if (idx !== -1) { r.branches[bi].splice(idx, 1); selElemId = null; render(); return; }
@@ -1456,6 +1474,22 @@ function evalLogic() {
         }
       });
       if (pwr) rungPwr = true; // OR: any branch powered = rung powered
+    });
+    // Post elements run on the OR result of all branches
+    let postPwr = rungPwr;
+    rung.post.forEach(el => {
+      if (el.t === 'contact') {
+        const state = !!tags[el.label];
+        const pass = el.sub === 'nc' ? !state : state;
+        el._pw = postPwr && pass; postPwr = postPwr && pass;
+      } else if (el.t === 'coil') {
+        el._pw = postPwr;
+        if (postPwr) {
+          if (el.sub === 'out') tags[el.label] = true;
+          else if (el.sub === 'set') tags[el.label] = true;
+          else if (el.sub === 'res') tags[el.label] = false;
+        }
+      } else { el._pw = postPwr; }
     });
     rung.powered = rungPwr;
   });
