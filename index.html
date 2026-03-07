@@ -1000,7 +1000,7 @@ function render() {
     const wrap = document.createElement('div');
     wrap.className = 'rung-wrap' + (pw ? ' sim-on' : '');
     wrap.dataset.id = rung.id;
-    wrap.draggable = true;
+    wrap.draggable = false;          // only true while drag-handle held
     wrap.addEventListener('dragstart', rdragStart);
     wrap.addEventListener('dragover',  rdragOver);
     wrap.addEventListener('dragleave', rdragLeave);
@@ -1025,6 +1025,14 @@ function render() {
       </div>
       <div class="rail"></div>`;
     container.appendChild(wrap);
+
+    // Enable rung drag ONLY when the handle is held — prevents elem drags being hijacked
+    const handle = wrap.querySelector('.drag-handle');
+    if (handle) {
+      handle.addEventListener('mousedown', () => { wrap.draggable = true; });
+      handle.addEventListener('mouseleave', () => { if (!dragSrcId) wrap.draggable = false; });
+    }
+    wrap.addEventListener('dragend', () => { wrap.draggable = false; });
 
     // Insert-rung spacer
     const spacer = document.createElement('div');
