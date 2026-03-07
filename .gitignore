@@ -1,0 +1,6 @@
+# Build tooling — never push to GitHub
+node_modules/
+source.html
+build.js
+package.json
+package-lock.json
