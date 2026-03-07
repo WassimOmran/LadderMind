@@ -346,6 +346,90 @@ body::before{content:'';position:fixed;inset:0;
 .mbtn.p{background:var(--cyan);border:none;color:#000;}
 .mbtn.p:hover{background:var(--cyanD);}
 
+/* ── Learn Tab ── */
+.learn-wrap{display:grid;grid-template-columns:270px 1fr 320px;gap:10px;height:calc(100vh - 98px);max-width:1500px;margin:0 auto;}
+.learn-sidebar{background:var(--s1);border:1px solid var(--b1);border-radius:5px;overflow-y:auto;padding:8px 0;}
+.learn-sidebar-hdr{padding:10px 14px 6px;font-family:var(--disp);font-size:10px;letter-spacing:2px;color:var(--cyan);text-transform:uppercase;border-bottom:1px solid var(--b1);margin-bottom:6px;}
+.lm-prog-total{font-size:9px;color:var(--t3);margin-top:2px;letter-spacing:1px;}
+.lm-prog-bar{height:3px;background:var(--b1);border-radius:2px;margin:6px 14px 8px;}
+.lm-prog-fill{height:100%;background:var(--cyan);border-radius:2px;transition:width .5s;}
+.learn-mod{border-bottom:1px solid rgba(255,255,255,.04);}
+.learn-mod-hdr{display:flex;align-items:center;gap:8px;padding:9px 14px;cursor:pointer;transition:background .12s;user-select:none;}
+.learn-mod-hdr:hover{background:var(--s2);}
+.learn-mod-icon{width:26px;height:26px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;}
+.learn-mod-info{flex:1;min-width:0;}
+.learn-mod-name{font-size:11px;font-weight:700;color:var(--bright);line-height:1.3;}
+.learn-mod-prog{font-size:9px;color:var(--t3);margin-top:1px;}
+.learn-mod-arr{font-size:9px;color:var(--t3);transition:transform .2s;margin-left:auto;}
+.learn-mod.open .learn-mod-arr{transform:rotate(90deg);}
+.learn-lessons{display:none;padding:3px 0;}
+.learn-mod.open .learn-lessons{display:block;}
+.learn-lesson{display:flex;align-items:center;gap:8px;padding:7px 14px 7px 28px;cursor:pointer;font-size:11px;color:var(--t2);transition:all .12s;}
+.learn-lesson:hover{background:var(--s2);color:var(--t1);}
+.learn-lesson.active{color:var(--cyan);background:rgba(0,212,255,.06);}
+.learn-lesson.done .ll-dot{background:var(--green);box-shadow:0 0 5px var(--green);}
+.ll-dot{width:7px;height:7px;border-radius:50%;background:var(--b2);flex-shrink:0;transition:all .3s;}
+.ll-name{flex:1;line-height:1.35;}
+.ll-mins{font-size:9px;color:var(--t3);}
+.learn-main{display:flex;flex-direction:column;background:var(--s1);border:1px solid var(--b1);border-radius:5px;overflow:hidden;min-width:0;}
+.learn-content{flex:1;overflow-y:auto;padding:26px 30px;}
+.lc-mod-label{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);margin-bottom:5px;font-family:var(--disp);}
+.lc-title{font-family:var(--ui);font-size:20px;font-weight:800;color:var(--bright);margin-bottom:14px;line-height:1.3;}
+.lc-progress{height:3px;background:var(--b1);border-radius:2px;margin-bottom:22px;}
+.lc-progress-fill{height:100%;background:var(--cyan);border-radius:2px;transition:width .5s;}
+.lc-body{font-size:12.5px;color:var(--t1);line-height:1.8;max-width:700px;}
+.lc-body h3{font-family:var(--disp);font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);margin:22px 0 8px;}
+.lc-body p{margin-bottom:14px;}
+.lc-body ul,.lc-body ol{margin:0 0 14px 20px;}
+.lc-body li{margin-bottom:6px;}
+.lc-body code{font-family:var(--mono);font-size:11px;background:var(--s3);color:var(--orange);padding:1px 5px;border-radius:2px;}
+.lc-body strong{color:var(--bright);}
+.lc-tip{background:rgba(0,212,255,.05);border-left:3px solid var(--cyan);padding:10px 14px;border-radius:0 3px 3px 0;margin:14px 0;font-size:12px;color:var(--t1);}
+.lc-warn{background:rgba(255,107,53,.05);border-left:3px solid var(--orange);padding:10px 14px;border-radius:0 3px 3px 0;margin:14px 0;font-size:12px;color:var(--t1);}
+.lc-demo{background:var(--s2);border:1px solid var(--b2);border-radius:4px;padding:14px 18px;margin:14px 0;font-family:var(--mono);font-size:12px;color:var(--cyan);line-height:2.2;white-space:pre;}
+.quiz-block{background:var(--s2);border:1px solid var(--b2);border-radius:4px;padding:16px;margin:22px 0;max-width:680px;}
+.quiz-label{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--orange);margin-bottom:8px;font-weight:700;}
+.quiz-q{font-size:12px;font-weight:700;color:var(--bright);margin-bottom:12px;line-height:1.5;}
+.quiz-opts{display:flex;flex-direction:column;gap:7px;}
+.quiz-opt{padding:9px 14px;background:var(--s3);border:1px solid var(--b1);border-radius:3px;cursor:pointer;font-size:11px;color:var(--t1);transition:all .12s;text-align:left;font-family:var(--ui);}
+.quiz-opt:hover:not([disabled]){border-color:var(--cyan);color:var(--cyan);background:rgba(0,212,255,.04);}
+.quiz-opt.correct{border-color:var(--green)!important;background:rgba(0,255,136,.07)!important;color:var(--green)!important;}
+.quiz-opt.wrong{border-color:#ff4458!important;background:rgba(255,68,88,.07)!important;color:#ff4458!important;}
+.quiz-fb{margin-top:10px;font-size:11px;padding:8px 12px;border-radius:3px;display:none;line-height:1.6;}
+.quiz-fb.show{display:block;}
+.quiz-fb.ok{background:rgba(0,255,136,.06);color:var(--green);border:1px solid rgba(0,255,136,.2);}
+.quiz-fb.fail{background:rgba(255,68,88,.06);color:#ff4458;border:1px solid rgba(255,68,88,.2);}
+.lc-actions{display:flex;align-items:center;gap:9px;padding:12px 30px;border-top:1px solid var(--b1);background:var(--s2);flex-shrink:0;}
+.lbtn{padding:7px 16px;font-family:var(--ui);font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;border-radius:3px;cursor:pointer;transition:all .12s;}
+.lbtn.pri{background:var(--cyan);color:#000;border:none;}
+.lbtn.pri:hover{background:var(--cyanD);}
+.lbtn.sec{background:transparent;border:1px solid var(--b2);color:var(--t2);}
+.lbtn.sec:hover{border-color:var(--cyan);color:var(--cyan);}
+.lbtn.grn{background:rgba(0,255,136,.12);border:1px solid var(--green);color:var(--green);}
+.lbtn.grn:hover{background:rgba(0,255,136,.22);}
+.lbtn.done-check{color:var(--green);font-size:12px;margin-right:auto;}
+/* Tutor */
+.learn-tutor{background:var(--s1);border:1px solid var(--b1);border-radius:5px;display:flex;flex-direction:column;overflow:hidden;}
+.tutor-hdr{padding:11px 14px;border-bottom:1px solid var(--b1);display:flex;align-items:center;gap:8px;flex-shrink:0;}
+.tutor-title{font-size:11px;font-weight:700;color:var(--bright);letter-spacing:1px;text-transform:uppercase;}
+.tutor-badge{font-size:9px;font-weight:700;background:rgba(0,212,255,.14);color:var(--cyan);padding:2px 6px;border-radius:2px;letter-spacing:1px;margin-left:auto;}
+.tutor-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 6px var(--green);}
+.tutor-msgs{flex:1;overflow-y:auto;padding:10px 12px;display:flex;flex-direction:column;gap:8px;}
+.tmsg{font-size:11px;line-height:1.65;}
+.tmsg .tw{font-size:9px;color:var(--t3);margin-bottom:3px;letter-spacing:1px;text-transform:uppercase;}
+.tmsg .tb{padding:8px 11px;border-radius:3px;}
+.tmsg.ai .tb{background:var(--s2);color:var(--t1);border:1px solid var(--b1);border-radius:3px 8px 8px 3px;}
+.tmsg.usr .tb{background:rgba(0,212,255,.08);color:var(--bright);border:1px solid rgba(0,212,255,.18);border-radius:8px 3px 3px 8px;}
+.tutor-qs{padding:8px 10px;border-top:1px solid var(--b1);display:flex;flex-direction:column;gap:5px;flex-shrink:0;}
+.tutor-qs-lbl{font-size:9px;letter-spacing:1.5px;color:var(--t3);text-transform:uppercase;margin-bottom:2px;}
+.tqq{padding:6px 10px;font-size:10px;background:var(--s2);border:1px solid var(--b1);border-radius:3px;color:var(--t2);cursor:pointer;text-align:left;transition:all .12s;font-family:var(--ui);width:100%;}
+.tqq:hover{border-color:var(--cyan);color:var(--cyan);}
+.tutor-row{display:flex;gap:6px;padding:8px 10px;border-top:1px solid var(--b1);flex-shrink:0;}
+.tutor-ta{flex:1;background:var(--s2);border:1px solid var(--b1);border-radius:3px;color:var(--t1);font-family:var(--ui);font-size:11px;padding:7px 9px;resize:none;outline:none;min-height:36px;max-height:90px;}
+.tutor-ta:focus{border-color:var(--cyan);}
+.tutor-send{width:36px;height:36px;background:var(--cyan);border:none;border-radius:3px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.tutor-send:hover{background:var(--cyanD);}
+
 /* scan line */
 @keyframes scanline{0%{top:0;}100%{top:100%;}}
 .ladder-scroll::after{content:'';position:fixed;left:198px;right:345px;height:1px;background:linear-gradient(90deg,transparent,rgba(0,212,255,.07),transparent);animation:scanline 6s linear infinite;pointer-events:none;}
@@ -364,6 +448,7 @@ body::before{content:'';position:fixed;inset:0;
     <button class="nav-btn" onclick="switchTab('simulator')">Simulator</button>
     <button class="nav-btn" onclick="switchTab('tagtable')">Tag Table</button>
     <button class="nav-btn" onclick="switchTab('templates')">Templates</button>
+    <button class="nav-btn" onclick="switchTab('learn')" style="color:var(--cyan);">📚 Learn</button>
   </nav>
   <div class="topbar-r">
     <button class="sim-pill" id="simPill" onclick="toggleSim()">
@@ -484,6 +569,61 @@ body::before{content:'';position:fixed;inset:0;
     <div class="tv-title">Template Library</div>
     <div class="tv-sub">Click any template to load it instantly into the editor.</div>
     <div class="tpl-grid" id="tplGrid"></div>
+  </div>
+</div>
+
+<div class="tab-view" id="tv-learn">
+  <div style="padding:0;height:100%">
+    <div class="learn-wrap" id="learnWrap">
+      <!-- SIDEBAR -->
+      <div class="learn-sidebar">
+        <div class="learn-sidebar-hdr">
+          PLC Course
+          <div class="lm-prog-bar"><div class="lm-prog-fill" id="lmProgFill" style="width:0%"></div></div>
+          <div class="lm-prog-total" id="lmProgLabel">0 / 0 lessons complete</div>
+        </div>
+        <div id="learnModList"></div>
+      </div>
+      <!-- MAIN CONTENT -->
+      <div class="learn-main">
+        <div class="learn-content" id="learnContent">
+          <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--t3);gap:12px;">
+            <svg width="60" height="60" viewBox="0 0 60 60" fill="none"><rect x="8" y="10" width="44" height="40" rx="4" stroke="#00d4ff" stroke-width="1.5" opacity=".3"/><line x1="16" y1="22" x2="44" y2="22" stroke="#00d4ff" stroke-width="1.5" opacity=".3"/><line x1="16" y1="30" x2="36" y2="30" stroke="#00d4ff" stroke-width="1.5" opacity=".3"/><line x1="16" y1="38" x2="40" y2="38" stroke="#00d4ff" stroke-width="1.5" opacity=".3"/></svg>
+            <div style="font-size:14px;font-weight:700;color:var(--t2);">Select a lesson to begin</div>
+            <div style="font-size:11px;max-width:320px;text-align:center;line-height:1.7;">Pick any module from the sidebar. The AI tutor is ready to answer your questions in real-time.</div>
+          </div>
+        </div>
+        <div class="lc-actions" id="learnActions" style="display:none;">
+          <span class="lbtn done-check" id="learnDoneCheck"></span>
+          <button class="lbtn grn" id="learnTryBtn" onclick="learnTryInEditor()" style="display:none;">▶ Try in Editor</button>
+          <button class="lbtn sec" onclick="learnPrev()">← Prev</button>
+          <button class="lbtn pri" onclick="learnNext()">Next →</button>
+        </div>
+      </div>
+      <!-- AI TUTOR -->
+      <div class="learn-tutor">
+        <div class="tutor-hdr">
+          <div class="tutor-dot"></div>
+          <span class="tutor-title">AI Tutor</span>
+          <span class="tutor-badge">GPT-4o</span>
+        </div>
+        <div class="tutor-msgs" id="tutorMsgs">
+          <div class="tmsg ai"><div class="tw">LadderMind Tutor</div><div class="tb">👋 I'm your PLC tutor. I'll give you tips, quiz you, and answer anything as you go through the lessons.<br><br>Ask me anything — or just click a question below!</div></div>
+        </div>
+        <div class="tutor-qs" id="tutorQs">
+          <div class="tutor-qs-lbl">Quick questions</div>
+          <button class="tqq" onclick="tutorAsk(this.textContent)">What's the difference between NO and NC?</button>
+          <button class="tqq" onclick="tutorAsk(this.textContent)">When do I use Set vs Output coil?</button>
+          <button class="tqq" onclick="tutorAsk(this.textContent)">Explain scan cycle to me simply</button>
+        </div>
+        <div class="tutor-row">
+          <textarea class="tutor-ta" id="tutorIn" placeholder="Ask the tutor..." rows="1" onkeydown="tutorKey(event)" oninput="this.style.height='auto';this.style.height=Math.min(this.scrollHeight,90)+'px'"></textarea>
+          <button class="tutor-send" onclick="tutorSend()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -714,15 +854,16 @@ function mkElem(type, overrides = {}) {
 }
 
 function mkRung(elems = [], comment = '') {
-  return { id: uid(), comment, branches: [elems], powered: false };
+  return { id: uid(), comment, branches: [elems], post: [], powered: false };
 }
 
 // ── Branch helpers ──
-const allBranchElems = r => (r.branches || [r.elements||[]]).flat();
-function normBranches(r) { if (!r.branches) { r.branches = [r.elements||[]]; delete r.elements; } return r; }
+const allBranchElems = r => [...(r.branches || [r.elements||[]]).flat(), ...(r.post||[])];
+function normBranches(r) { if (!r.branches) { r.branches = [r.elements||[]]; delete r.elements; } if (!r.post) r.post = []; return r; }
 function findInBranches(rung, eid) {
+  if (rung.post) { const el = rung.post.find(e => e.id === eid); if (el) return { el, section: 'post', bi: -1 }; }
   const br = rung.branches || [rung.elements||[]];
-  for (let bi = 0; bi < br.length; bi++) { const el = br[bi].find(e => e.id === eid); if (el) return {el, bi}; }
+  for (let bi = 0; bi < br.length; bi++) { const el = br[bi].find(e => e.id === eid); if (el) return { el, section: 'branch', bi }; }
   return null;
 }
 
@@ -1311,16 +1452,17 @@ let currentTab = 'editor';
 
 function switchTab(tab) {
   currentTab = tab;
-  document.querySelectorAll('.nav-btn').forEach((b, i) => b.classList.toggle('on', ['editor','simulator','tagtable','templates'][i] === tab));
+  document.querySelectorAll('.nav-btn').forEach((b, i) => b.classList.toggle('on', ['editor','simulator','tagtable','templates','learn'][i] === tab));
   const layout = document.getElementById('layout');
   layout.style.display = tab === 'editor' ? '' : 'none';
-  ['simulator','tagtable','templates'].forEach(t => {
+  ['simulator','tagtable','templates','learn'].forEach(t => {
     const el = document.getElementById('tv-' + t);
     if (el) el.classList.toggle('on', t === tab);
   });
   if (tab === 'simulator')  buildSimView();
   if (tab === 'tagtable')   buildTagTable();
   if (tab === 'templates')  buildTemplates();
+  if (tab === 'learn')      buildLearn();
 }
 
 // ── Simulator View ──
@@ -1726,6 +1868,776 @@ function doExport() {
 }
 function saveProj() { addMsg('ai', '💾 Project saved to workspace.'); }
 document.getElementById('expOverlay').addEventListener('click', e => { if (e.target.id === 'expOverlay') closeExport(); });
+
+// ═══════════════════════════════════════════════════
+//  LEARN TAB — Full Interactive PLC Course
+// ═══════════════════════════════════════════════════
+let learnProgress = {};   // key: 'mi-li' → true
+let learnCurrent  = null; // { mi, li }
+let tutorHistory  = [];
+
+const COURSE = [
+  {
+    icon:'🔌', color:'#00d4ff', name:'PLC Fundamentals',
+    lessons:[
+      { title:'What is a PLC?', mins:5, tryTemplate:null,
+        html:`<h3>Introduction</h3>
+<p>A <strong>Programmable Logic Controller (PLC)</strong> is a ruggedized industrial computer designed to control machines and processes on factory floors, oil rigs, water plants, and anywhere reliable automation is needed.</p>
+<p>Unlike a regular PC, a PLC is built to survive vibration, dust, extreme temperatures, and electrical noise — and it runs 24/7 without crashing.</p>
+<h3>Key Components</h3>
+<ul>
+  <li><strong>CPU</strong> — executes the user program in a repeating scan cycle</li>
+  <li><strong>Input modules</strong> — read sensors, switches, encoders</li>
+  <li><strong>Output modules</strong> — drive motors, solenoids, indicators</li>
+  <li><strong>Power supply</strong> — typically 24VDC or 120/240VAC</li>
+  <li><strong>Communication ports</strong> — PROFINET, EtherNet/IP, Modbus</li>
+</ul>
+<h3>Where PLCs Are Used</h3>
+<ul>
+  <li>Automotive assembly lines (spot welding, conveyors)</li>
+  <li>Food & beverage (filling, labeling, pasteurization)</li>
+  <li>Water treatment (pump control, dosing)</li>
+  <li>Oil & gas (pipeline monitoring, valve control)</li>
+  <li>Building automation (HVAC, elevators)</li>
+</ul>
+<div class="lc-tip">💡 <strong>Field tip:</strong> Siemens S7-1200/1500, Allen-Bradley CompactLogix/ControlLogix, and Schneider M340 are the most common PLCs you'll encounter in industry today.</div>`,
+        quiz:{ q:'What makes a PLC different from a standard PC?', opts:['It runs Windows','It is ruggedized for industrial environments','It cannot be programmed','It only controls motors'], ans:1, fb:'Correct! PLCs are designed for harsh industrial environments — vibration, dust, temperature extremes — and run 24/7 without rebooting.' }
+      },
+      { title:'The Scan Cycle', mins:6, tryTemplate:null,
+        html:`<h3>How a PLC Executes Your Program</h3>
+<p>The PLC doesn't run your program once — it repeats it in a continuous loop called the <strong>scan cycle</strong>. Understanding this is critical to avoid bugs.</p>
+<div class="lc-demo">1. READ INPUTS   → copy physical I/O state into memory image
+2. EXECUTE LOGIC → run ladder program top to bottom, left to right
+3. WRITE OUTPUTS → copy results to physical output modules
+4. HOUSEKEEPING  → comms, diagnostics, OB scheduling
+5. REPEAT ↺  (typical 1–20ms cycle time)</div>
+<h3>Why the Scan Cycle Matters</h3>
+<ul>
+  <li>An input that changes <em>during</em> execution won't be seen until the next scan</li>
+  <li>Output coils only energize at the <em>end</em> of the scan — set coils and immediate I/O are exceptions</li>
+  <li>Fast events (< 1ms) can be missed — use hardware interrupts (OB40) for those</li>
+  <li>If scan time exceeds the watchdog timer, the CPU faults and stops</li>
+</ul>
+<div class="lc-warn">⚠️ <strong>Common mistake:</strong> Writing to the same output address in two separate rungs — only the <em>last</em> write wins. Use intermediate memory bits (%M) instead.</div>
+<h3>Scan Time vs Cycle Time</h3>
+<p>Scan time is measured in milliseconds. A busy S7-1200 might scan in 3–5ms. A safety PLC may need a scan time under 1ms for SIL2 compliance.</p>`,
+        quiz:{ q:'During which phase does the PLC update physical output modules?', opts:['Read Inputs','Execute Logic','Write Outputs','Housekeeping'], ans:2, fb:'Correct! Physical outputs are only updated in the "Write Outputs" phase — after all logic has been evaluated.' }
+      },
+      { title:'I/O Addressing', mins:5, tryTemplate:null,
+        html:`<h3>Siemens TIA Portal Addressing</h3>
+<p>Every I/O point in a PLC has a unique address. In Siemens TIA Portal, addresses follow this format:</p>
+<div class="lc-demo">%I0.0   → Input byte 0, bit 0   (first digital input)
+%I0.1   → Input byte 0, bit 1
+%Q0.0   → Output byte 0, bit 0  (first digital output)
+%MW10   → Memory Word 10 (16-bit integer)
+%MD20   → Memory Double-word 20 (32-bit / DINT / REAL)
+%IW64   → Input Word 64 (analog input, scaled 0–27648)</div>
+<h3>Allen-Bradley Addressing (for reference)</h3>
+<div class="lc-demo">I:0/0   → Input file 0, bit 0
+O:0/0   → Output file 0, bit 0
+N7:0    → Integer file 7, word 0
+F8:0    → Float file 8, element 0</div>
+<h3>Symbolic Tags</h3>
+<p>Modern PLCs use <strong>symbolic tags</strong> instead of raw addresses. You define a name like <code>Motor_Run</code> mapped to <code>%Q0.0</code>. This makes programs readable and easier to maintain.</p>
+<div class="lc-tip">💡 Always use symbolic tags — never hardcode raw addresses (%I0.0) in your logic. When hardware changes, you only update the tag definition once.</div>`,
+        quiz:{ q:'What does %IW64 represent in Siemens addressing?', opts:['Output bit 64','Input Word 64 (e.g., analog input)','Memory bit 64','A timer value'], ans:1, fb:'Correct! %IW64 is a 16-bit Input Word — typically used for analog input channels scaled from 0 to 27648.' }
+      }
+    ]
+  },
+  {
+    icon:'📊', color:'#00ff88', name:'Ladder Logic Basics',
+    lessons:[
+      { title:'What is Ladder Logic?', mins:5, tryTemplate:null,
+        html:`<h3>The Language of PLC Control</h3>
+<p>Ladder Logic (LAD) is the most widely used PLC programming language. It was designed to look like <strong>relay control schematics</strong> — which is why it uses symbols for contacts and coils.</p>
+<p>Each horizontal row is called a <strong>rung</strong>. Current flows left-to-right through contacts. If power reaches the coil on the right, the output energizes.</p>
+<div class="lc-demo">Power Rail ──[  NO  ]──[  NC  ]──(  OUT  )── Power Rail
+              Start_PB   Stop_PB    Motor_Run</div>
+<h3>The 5 IEC 61131-3 Languages</h3>
+<ul>
+  <li><strong>LAD</strong> — Ladder Diagram (this course)</li>
+  <li><strong>FBD</strong> — Function Block Diagram (graphical, signal flow)</li>
+  <li><strong>ST</strong> — Structured Text (Pascal-like, great for math)</li>
+  <li><strong>IL</strong> — Instruction List (deprecated, like assembly)</li>
+  <li><strong>SFC</strong> — Sequential Function Chart (state machines)</li>
+</ul>
+<div class="lc-tip">💡 LAD is easiest for electricians and maintenance. ST is preferred for complex math. FBD is popular for PID and data flow applications.</div>`,
+        quiz:{ q:'What does each horizontal row in a Ladder Logic program represent?', opts:['A variable','A rung','A function block','A data type'], ans:1, fb:'Correct! Each horizontal row is called a rung. Power flows left to right through contacts, energizing the coil if conditions are met.' }
+      },
+      { title:'Contacts: NO and NC', mins:6, tryTemplate:'motorStarter',
+        html:`<h3>Normally Open (NO) Contact --|  |--</h3>
+<p>A <strong>Normally Open</strong> contact <strong>passes power when its tag is TRUE (1)</strong>. Think of it as a push-button that completes the circuit when pressed.</p>
+<div class="lc-demo">──[ Start_PB ]──   Passes power when Start_PB = TRUE</div>
+<h3>Normally Closed (NC) Contact --|/|--</h3>
+<p>A <strong>Normally Closed</strong> contact <strong>passes power when its tag is FALSE (0)</strong>. Think of it as a stop button — it breaks the circuit when pressed.</p>
+<div class="lc-demo">──[/Stop_PB/]──   Passes power when Stop_PB = FALSE (not pressed)</div>
+<h3>Series vs Parallel</h3>
+<p><strong>Series (AND logic):</strong> All contacts must pass for the coil to energize.</p>
+<p><strong>Parallel (OR logic):</strong> Any one contact passing is enough.</p>
+<div class="lc-demo">AND:  ──[ A ]──[ B ]──( OUT )──
+OR:   ──[ A ]──────────( OUT )──
+      ──[ B ]──┘</div>
+<div class="lc-warn">⚠️ <strong>NC doesn't mean "wired NC"</strong> — it refers to the logic state in the program. A physical NC limit switch wired to <code>%I0.3</code> will read TRUE in normal state — you may use an NO contact in your rung for it.</div>`,
+        quiz:{ q:'An NC (Normally Closed) contact passes power when its tag is...', opts:['TRUE (1)','FALSE (0)','Either TRUE or FALSE','Only at startup'], ans:1, fb:'Correct! An NC contact passes power when the tag is FALSE — the contact "opens" when the tag becomes TRUE, blocking power flow.' }
+      },
+      { title:'Output Coils', mins:5, tryTemplate:'motorStarter',
+        html:`<h3>Output Coil —( )—</h3>
+<p>The output coil energizes (sets to TRUE) when power flows through all contacts in the rung. It de-energizes (goes FALSE) as soon as the rung loses power.</p>
+<div class="lc-demo">──[  Start  ]──[/ Stop /]──( Motor_Run )──</div>
+<h3>Coil Types</h3>
+<ul>
+  <li><code>( )</code> <strong>Output</strong> — energized while rung is powered; de-energizes immediately when power lost</li>
+  <li><code>(S)</code> <strong>Set (Latch)</strong> — stays ON even after rung loses power; must be reset explicitly</li>
+  <li><code>(R)</code> <strong>Reset (Unlatch)</strong> — turns OFF a previously Set bit</li>
+  <li><code>(P)</code> <strong>Positive Edge</strong> — pulses ON for one scan on rising edge</li>
+  <li><code>(N)</code> <strong>Negative Edge</strong> — pulses ON for one scan on falling edge</li>
+</ul>
+<div class="lc-tip">💡 <strong>Use Set/Reset for latching.</strong> E.g., an alarm that must stay on even if the fault clears — until an operator acknowledges it with a Reset coil.</div>
+<h3>Sealing Circuit (Self-Latching)</h3>
+<div class="lc-demo">Rung 1: ──[ Start ]──[/ Stop /]──( Run )──
+Rung 2: ──[  Run  ]──────────────( Run )──  ← seal-in</div>
+<p>The motor "seals itself in" by adding a parallel NO contact of its own output — a classic 3-wire control circuit.</p>`,
+        quiz:{ q:'A Set (S) coil behaves like...', opts:['An output that turns off when the rung loses power','A retentive latch that stays ON until explicitly Reset','A timer output','A counter output'], ans:1, fb:'Correct! A Set coil latches the bit to TRUE and it remains TRUE even after the rung loses power — only a Reset coil on the same tag can clear it.' }
+      },
+      { title:'Sealing / Latching Circuits', mins:6, tryTemplate:'motorStarter',
+        html:`<h3>The 3-Wire Motor Control Circuit</h3>
+<p>This is the most fundamental PLC pattern you will use every single day. Master it first.</p>
+<div class="lc-demo">──[ Start ]──[/ Stop /]──[/ OL /]──( Motor )──
+     ↑          ↑              ↑
+     ├──[ Motor ]──┘            Overload relay NC
+     Seal-in contact</div>
+<h3>How It Works</h3>
+<ol>
+  <li>Press <strong>Start</strong> → power reaches the <code>Motor</code> coil → motor energizes</li>
+  <li><code>Motor</code> contact in rung 2 closes (seal-in) → keeps motor running even after Start is released</li>
+  <li>Press <strong>Stop</strong> (NC) or OL trips → rung loses power → motor de-energizes → seal-in contact opens</li>
+</ol>
+<h3>Using SR Flip-Flop as Alternative</h3>
+<p>The SR flip-flop block achieves the same latching without needing two rungs, and has a defined priority (S or R dominant).</p>
+<div class="lc-tip">💡 <strong>Always include an E-Stop and overload relay NC contact in your motor rungs.</strong> This is a safety requirement, not optional.</div>`,
+        quiz:{ q:'In a sealing circuit, why is there a NO contact of the motor output in parallel with the Start button?', opts:['To add a second start button','To keep the motor running after the Start button is released','To prevent the motor from starting','To detect overloads'], ans:1, fb:'Correct! The seal-in contact keeps the motor energized after the momentary Start button is released — it\'s a self-latching circuit.' }
+      }
+    ]
+  },
+  {
+    icon:'⏱', color:'#a78bfa', name:'Timers',
+    lessons:[
+      { title:'TON — On-Delay Timer', mins:7, tryTemplate:'timerPair',
+        html:`<h3>TON: Timer On-Delay</h3>
+<p>The <strong>TON</strong> starts counting when its enable input (IN) is powered. After the preset time (PT) elapses, the output bit (Q) goes TRUE.</p>
+<div class="lc-demo">──[ Enable ]──[TON T1, PT=T#5S]──( T1.Q )──
+                  ↑ IN high  → timer runs
+                  ↑ elapsed 5s → T1.Q = TRUE</div>
+<h3>TON Behavior</h3>
+<ul>
+  <li><strong>IN rises</strong> → ET (elapsed time) starts incrementing</li>
+  <li><strong>ET ≥ PT</strong> → Q goes TRUE</li>
+  <li><strong>IN falls</strong> → ET resets to 0, Q goes FALSE immediately</li>
+</ul>
+<h3>Use Cases</h3>
+<ul>
+  <li>Startup delay — wait 3 seconds before enabling a conveyor</li>
+  <li>Fault delay — motor running but no speed feedback for 2s → fault</li>
+  <li>Anti-bounce — debounce a chattering sensor</li>
+  <li>Sequence timing — green light 30s → yellow 5s → red 30s</li>
+</ul>
+<div class="lc-demo">Time→ ─────────────────────────────
+IN:   ___████████████████████████
+ET:      0s──1s──2s──3s──4s──5s──
+Q:       _______________________█</div>
+<div class="lc-tip">💡 In Siemens TIA Portal, TON is an IEC timer — it requires an <strong>Instance Data Block (IDB)</strong>. Always give it a descriptive name like <code>StartDelay_T</code> not just <code>T1</code>.</div>`,
+        quiz:{ q:'If TON has PT=T#5S and its IN input drops to FALSE after 3 seconds, what happens?', opts:['Q stays TRUE','ET holds at 3s and waits','ET resets to 0 and Q stays FALSE','ET continues to 5s anyway'], ans:2, fb:'Correct! When IN drops FALSE, the TON immediately resets — ET goes back to 0 and Q stays/becomes FALSE. The timer only outputs when IN has been TRUE for the full PT duration.' }
+      },
+      { title:'TOF — Off-Delay Timer', mins:6, tryTemplate:'timerPair',
+        html:`<h3>TOF: Timer Off-Delay</h3>
+<p>The <strong>TOF</strong> is the opposite of TON. Its output (Q) goes TRUE as soon as IN goes TRUE. When IN falls FALSE, the timer starts counting — Q remains TRUE until PT elapses.</p>
+<div class="lc-demo">Time→ ─────────────────────────────────
+IN:   ___████████__________________________
+Q:    ___█████████████████████____________
+                  ↑ IN drops → timer starts
+                             → 5s later Q drops</div>
+<h3>Use Cases</h3>
+<ul>
+  <li><strong>Fan run-on</strong> — keep cooling fan running for 30s after machine stops</li>
+  <li><strong>Lamp hold</strong> — status indicator stays on briefly after event</li>
+  <li><strong>Pump purge</strong> — flush lines for 10s after pump stops</li>
+</ul>
+<div class="lc-tip">💡 <strong>Remember the key difference:</strong> TON delays the ON, TOF delays the OFF. A common memory trick: think of TOF as "the timer runs after the action stops."</div>`,
+        quiz:{ q:'A cooling fan needs to run for 20 seconds after the machine turns off. Which timer is correct?', opts:['TON with PT=T#20S','TOF with PT=T#20S','TP with PT=T#20S','TONR with PT=T#20S'], ans:1, fb:'Correct! TOF (Off-Delay) keeps the output TRUE for 20 seconds after the input drops — perfect for fan run-on after machine shutdown.' }
+      },
+      { title:'TP — Pulse Timer', mins:5, tryTemplate:null,
+        html:`<h3>TP: Pulse Timer</h3>
+<p>The <strong>TP</strong> generates a fixed-duration pulse on its Q output. Once triggered, it runs for exactly PT — it cannot be interrupted or extended by toggling IN.</p>
+<div class="lc-demo">Time→ ─────────────────────────────────
+IN:   ___███____███████_______________
+Q:    ___█████████____█████████______
+         ↑ triggered  ↑ triggered again
+           PT=3s pulse   PT=3s pulse</div>
+<h3>Key Behavior</h3>
+<ul>
+  <li>Rising edge of IN triggers the pulse</li>
+  <li>Q stays TRUE for exactly PT regardless of IN</li>
+  <li>Re-triggering during an active pulse has <strong>no effect</strong></li>
+</ul>
+<h3>Use Cases</h3>
+<ul>
+  <li>Solenoid kick — energize valve for exactly 500ms</li>
+  <li>Alarm horn pulse — 3-second beep on fault</li>
+  <li>One-shot operations where exact duration matters</li>
+</ul>`,
+        quiz:{ q:'A TP timer with PT=T#2S is triggered. While it is running, IN goes FALSE then TRUE again. What happens to Q?', opts:['Q resets and starts a new 2s pulse','Q extends by another 2s','Q continues its original 2s pulse unaffected','Q drops immediately'], ans:2, fb:'Correct! TP is a "one-shot" timer. Once triggered, it completes its full PT duration regardless of what IN does — it cannot be re-triggered while active.' }
+      },
+      { title:'TONR — Retentive Timer', mins:5, tryTemplate:null,
+        html:`<h3>TONR: Retentive On-Delay Timer</h3>
+<p>The <strong>TONR</strong> accumulates elapsed time across multiple enabling periods. Unlike TON, it does <strong>not</strong> reset when IN drops — it holds its ET value until explicitly reset.</p>
+<div class="lc-demo">Time→ ────────────────────────────────────
+IN:   ___████___████___████____________
+ET:      1s─2s  3s─4s  5s─6s─7s──8s── (accumulates!)
+Q:                               █████  (at PT=8s)</div>
+<h3>Reset</h3>
+<p>TONR has an explicit <strong>R (Reset)</strong> input or you use a Reset coil on the timer's run bit. Always design a reset condition.</p>
+<h3>Use Cases</h3>
+<ul>
+  <li><strong>Maintenance intervals</strong> — track total motor run hours</li>
+  <li><strong>Production timers</strong> — total machine uptime per shift</li>
+  <li><strong>Safety interlocks</strong> — if a machine runs more than X hours without inspection, lock it out</li>
+</ul>
+<div class="lc-tip">💡 TONR is ideal for OEE (Overall Equipment Effectiveness) tracking — count actual runtime vs available time.</div>`,
+        quiz:{ q:'TONR differs from TON because it...', opts:['Resets automatically when IN drops','Accumulates elapsed time across multiple enabling periods','Only works with analog inputs','Has no output bit'], ans:1, fb:'Correct! TONR is retentive — it remembers and accumulates the elapsed time across multiple ON periods. TON resets every time IN drops.' }
+      }
+    ]
+  },
+  {
+    icon:'🔢', color:'#ffd60a', name:'Counters',
+    lessons:[
+      { title:'CTU — Count Up', mins:6, tryTemplate:'partsCounter',
+        html:`<h3>CTU: Up Counter</h3>
+<p>The <strong>CTU</strong> increments its count value (CV) by 1 on each <strong>rising edge</strong> of the count input (CU). When CV reaches the preset value (PV), the output (Q) goes TRUE.</p>
+<div class="lc-demo">──[ Part_Sensor ]──[CTU Parts_C, PV=10]──
+                                 CV=0..10
+                                 Q = TRUE when CV≥PV</div>
+<h3>Inputs & Outputs</h3>
+<ul>
+  <li><strong>CU</strong> — Count Up pulse input (rising edge triggers count)</li>
+  <li><strong>R</strong> — Reset input (sets CV back to 0, Q goes FALSE)</li>
+  <li><strong>PV</strong> — Preset Value (the target count)</li>
+  <li><strong>Q</strong> — Output bit (TRUE when CV ≥ PV)</li>
+  <li><strong>CV</strong> — Current Value (accessible as <code>Parts_C.CV</code>)</li>
+</ul>
+<h3>Typical Application</h3>
+<div class="lc-demo">Rung 1: ──[ Part_Sensor ]──[CTU C1, PV=10]──
+Rung 2: ──[ C1.Q ]──( Stop_Conveyor )──
+Rung 3: ──[ Operator_ACK ]──(R)── C1  ← Reset coil</div>
+<div class="lc-tip">💡 Always program the reset rung. A counter with no reset path will count to 32767 and overflow — causing production errors that are very hard to debug.</div>`,
+        quiz:{ q:'CTU increments its CV on which event?', opts:['Level (while CU is TRUE)','Rising edge of CU input','Falling edge of CU input','Every scan cycle'], ans:1, fb:'Correct! CTU only counts on the rising edge (0→1 transition) of the CU input. This prevents counting multiple times on a single slow sensor signal.' }
+      },
+      { title:'CTD — Count Down', mins:4, tryTemplate:null,
+        html:`<h3>CTD: Down Counter</h3>
+<p>The <strong>CTD</strong> decrements its CV by 1 on each rising edge of CD. When CV reaches 0, Q goes TRUE.</p>
+<div class="lc-demo">──[ Dispense ]──[CTD C2, PV=100]──
+                    CV starts at 100, counts down
+                    Q = TRUE when CV ≤ 0</div>
+<h3>Inputs</h3>
+<ul>
+  <li><strong>CD</strong> — Count Down pulse</li>
+  <li><strong>LD</strong> — Load input — loads PV into CV (resets to full count)</li>
+</ul>
+<h3>Use Cases</h3>
+<ul>
+  <li><strong>Inventory management</strong> — start with 100 bottles in hopper, count down each dispensed</li>
+  <li><strong>Batch control</strong> — add exactly 50 parts, decrement to zero then stop</li>
+</ul>`,
+        quiz:{ q:'A CTD counter Q output is TRUE when CV is...', opts:['Equal to PV','Greater than PV','Less than or equal to 0','At any non-zero value'], ans:2, fb:'Correct! CTD Q goes TRUE when CV ≤ 0 — the count has reached zero (or gone below, which can happen if CD pulses after Q is already TRUE).' }
+      },
+      { title:'CTUD — Up/Down Counter', mins:5, tryTemplate:null,
+        html:`<h3>CTUD: Bidirectional Counter</h3>
+<p>The <strong>CTUD</strong> can both count up and count down. It has both CU and CD inputs, a Load (LD) input, and produces QU (up-reached PV) and QD (down-reached 0) outputs.</p>
+<div class="lc-demo">CU → Parts entering zone → CV increases
+CD → Parts leaving zone  → CV decreases
+QU = TRUE when CV ≥ PV  (zone full)
+QD = TRUE when CV ≤ 0   (zone empty)</div>
+<h3>Use Cases</h3>
+<ul>
+  <li><strong>Zone counting</strong> — track how many items are between two sensors</li>
+  <li><strong>Buffer management</strong> — count in vs count out to know buffer level</li>
+  <li><strong>Bidirectional conveyor</strong> — track position along a track</li>
+</ul>
+<div class="lc-tip">💡 CTUD is perfect for tracking "items in a zone." Count up when items enter, count down when they leave — CV at any time tells you exactly how many are inside.</div>`,
+        quiz:{ q:'CTUD QU output goes TRUE when...', opts:['CV ≤ 0','CV ≥ PV','CU has been pulsed once','Both CU and CD pulse simultaneously'], ans:1, fb:'Correct! QU = TRUE when CV ≥ PV. This signals that the count has reached (or exceeded) the preset value — typically a "full" condition.' }
+      }
+    ]
+  },
+  {
+    icon:'➕', color:'#ff6b35', name:'Comparison & Math',
+    lessons:[
+      { title:'Compare Instructions', mins:6, tryTemplate:null,
+        html:`<h3>Comparison Instructions</h3>
+<p>Compare instructions check the relationship between two values and pass power (TRUE) if the comparison is satisfied. They act like contacts — passing or blocking power flow.</p>
+<div class="lc-demo">──[CMP == IN1:Temperature IN2:100]──( Alarm )──
+   Passes power only when Temperature = 100</div>
+<h3>Available Operators</h3>
+<ul>
+  <li><code>==</code> Equal to</li>
+  <li><code>&lt;&gt;</code> Not equal to</li>
+  <li><code>&gt;</code> Greater than</li>
+  <li><code>&lt;</code> Less than</li>
+  <li><code>&gt;=</code> Greater than or equal</li>
+  <li><code>&lt;=</code> Less than or equal</li>
+</ul>
+<h3>IN_RANGE</h3>
+<p>A special comparison that checks if a value falls between MIN and MAX:</p>
+<div class="lc-demo">IN_RANGE: MIN=20 ≤ Temperature ≤ 80 → passes power</div>
+<div class="lc-tip">💡 <strong>Compare instructions can use constants or tag names.</strong> E.g., compare a temperature tag against another tag (setpoint) rather than a hardcoded number — this makes setpoints adjustable from HMI without changing code.</div>`,
+        quiz:{ q:'A CMP > instruction with IN1=Temperature, IN2=80 will pass power when...', opts:['Temperature = 80','Temperature < 80','Temperature > 80','Temperature ≠ 80'], ans:2, fb:'Correct! CMP > IN1:Temperature IN2:80 passes power only when Temperature is strictly greater than 80.' }
+      },
+      { title:'Math Instructions', mins:6, tryTemplate:null,
+        html:`<h3>Math Instructions</h3>
+<p>Math instructions perform arithmetic operations when the rung is powered. The result is written to an output tag.</p>
+<div class="lc-demo">ADD: IN1 + IN2 → OUT     Subtraction: SUB
+MUL: IN1 × IN2 → OUT     Division:    DIV
+MOD: IN1 mod IN2 → OUT   (remainder)</div>
+<h3>Example: Engineering Unit Conversion</h3>
+<div class="lc-demo">Rung 1: ──[ Always_True ]──[MUL: RPM_Raw × 0.1 → RPM_Scaled]──</div>
+<h3>Advanced Math</h3>
+<ul>
+  <li><code>ABS</code> — absolute value</li>
+  <li><code>SQRT</code> — square root</li>
+  <li><code>LIMIT</code> — clamp between MIN and MAX</li>
+  <li><code>MIN</code> / <code>MAX</code> — minimum/maximum of two values</li>
+</ul>
+<h3>Type Awareness</h3>
+<p>Always match data types. Dividing two integers gives an <strong>integer result</strong> (truncated). For decimal results, convert to REAL first using CONV.</p>
+<div class="lc-warn">⚠️ <strong>Division by zero</strong> will cause a CPU fault on many PLCs. Always protect divide instructions with a CMP &lt;&gt; 0 contact before them.</div>`,
+        quiz:{ q:'You divide integer 7 by integer 2 using a DIV instruction. What is the result?', opts:['3.5','3','4','Error'], ans:1, fb:'Correct! Integer division truncates (rounds toward zero) — 7 ÷ 2 = 3, not 3.5. If you need 3.5, convert both inputs to REAL using CONV first.' }
+      },
+      { title:'MOVE & Type Conversion', mins:5, tryTemplate:null,
+        html:`<h3>MOVE Instruction</h3>
+<p>MOVE copies the value from IN to OUT when the rung is powered. It's one of the most-used instructions for data handling.</p>
+<div class="lc-demo">──[ Set_Default ]──[MOV: 25 → Setpoint_Temp]──
+   On first scan, load default setpoint value</div>
+<h3>Type Conversion (CONV)</h3>
+<p>PLCs are strict about data types. CONV converts between types explicitly:</p>
+<div class="lc-demo">INT  → REAL  (e.g., 27648 analog raw → 4.000 engineering)
+REAL → INT   (truncates decimal)
+INT  → DINT  (widen for large values)
+WORD → INT   (reinterpret bit pattern)</div>
+<h3>SWAP Instruction</h3>
+<p>Swaps bytes within a word — useful when communicating with devices that use different byte orders (big-endian vs little-endian).</p>
+<div class="lc-tip">💡 <strong>Analog scaling pattern:</strong> Read raw 0–27648 → CONV to REAL → MUL by (MaxEU / 27648) → ADD offset → result in engineering units (°C, bar, m/s, etc.).</div>`,
+        quiz:{ q:'Why do you need CONV before using an INT value in a REAL math instruction?', opts:['To prevent overflows','PLCs are strict about types — INT and REAL cannot mix without explicit conversion','CONV speeds up execution','No reason — INT and REAL mix automatically'], ans:1, fb:'Correct! PLC languages (especially Siemens) are strongly typed. You must explicitly convert between INT and REAL — the compiler will reject mixed-type operations without CONV.' }
+      }
+    ]
+  },
+  {
+    icon:'🏗', color:'#00e5cc', name:'Program Structure',
+    lessons:[
+      { title:'OBs, FBs, FCs, DBs', mins:8, tryTemplate:null,
+        html:`<h3>Siemens TIA Portal Program Organization</h3>
+<p>Large PLC programs are organized into blocks — just like functions in software. This is defined in IEC 61131-3.</p>
+<h3>Organization Blocks (OB)</h3>
+<ul>
+  <li><strong>OB1</strong> — Main cyclic program (runs every scan)</li>
+  <li><strong>OB30–38</strong> — Cyclic interrupt (run at fixed time intervals, e.g., every 10ms)</li>
+  <li><strong>OB40</strong> — Hardware interrupt (triggered by fast digital input edge)</li>
+  <li><strong>OB80/82</strong> — Error handling (called on faults)</li>
+</ul>
+<h3>Function Blocks (FB)</h3>
+<p>FBs have their own <strong>Instance Data Block (IDB)</strong> — persistent memory. Use FBs for devices that need their own state: motor, valve, PID loop.</p>
+<h3>Functions (FC)</h3>
+<p>FCs are stateless — they have no memory of their own. Use FCs for pure calculations and utility routines.</p>
+<h3>Data Blocks (DB)</h3>
+<ul>
+  <li><strong>Global DB</strong> — shared data accessible from any block (recipe, parameters, HMI data)</li>
+  <li><strong>Instance DB</strong> — private memory for an FB instance</li>
+</ul>
+<div class="lc-tip">💡 <strong>Architecture pattern:</strong> Create one FB per equipment type (Motor_FB, Valve_FB), one DB per physical device instance, and call them from OB1. This mirrors object-oriented programming.</div>`,
+        quiz:{ q:'Which block type has its own persistent memory (Instance Data Block)?', opts:['OB (Organization Block)','FC (Function)','FB (Function Block)','Global DB'], ans:2, fb:'Correct! FBs have Instance Data Blocks that store their state between scan cycles — timers, counters, and internal flags persist inside the FB instance.' }
+      },
+      { title:'Tag Naming Conventions', mins:5, tryTemplate:null,
+        html:`<h3>Why Naming Standards Matter</h3>
+<p>A PLC program without naming standards is a maintenance nightmare. You — or someone else — will be debugging this at 2am. Make the names speak for themselves.</p>
+<h3>Recommended Format: Equipment_Signal_Modifier</h3>
+<div class="lc-demo">GOOD Examples:
+  Conv1_Motor_Run        → Conveyor 1 motor run command
+  Press1_Oil_Temp_High   → Press 1 oil temperature high alarm
+  Stn3_Cylinder_Extend   → Station 3 cylinder extend solenoid
+  Main_EStop_OK          → Main E-Stop safety chain OK
+
+BAD Examples:
+  Motor1                 → Which motor? What state?
+  I0_0                   → Raw address — meaningless
+  Temp                   → Temperature of what?
+  X001                   → Allen-Bradley naming from 1990</div>
+<h3>Standard Suffixes</h3>
+<ul>
+  <li><code>_Cmd</code> — operator command (from HMI)</li>
+  <li><code>_Fdbk</code> — feedback from field device</li>
+  <li><code>_Flt</code> — fault bit</li>
+  <li><code>_Ack</code> — acknowledgment</li>
+  <li><code>_SP</code> — setpoint</li>
+  <li><code>_PV</code> — process variable</li>
+</ul>
+<div class="lc-warn">⚠️ Never use spaces in tag names — some systems treat them as illegal characters. Use underscores instead.</div>`,
+        quiz:{ q:'Which tag name follows best practices?', opts:['Motor1','%Q0.0','Mix1_Agitator_RunFdbk','run'], ans:2, fb:'Correct! Mix1_Agitator_RunFdbk clearly identifies the equipment (Mix1, Agitator), the signal (Run), and the type (Fdbk = feedback from field). Anyone can understand it without documentation.' }
+      }
+    ]
+  },
+  {
+    icon:'🛡', color:'#ff4458', name:'Safety & Best Practices',
+    lessons:[
+      { title:'E-Stop Design', mins:7, tryTemplate:'alarmSystem',
+        html:`<h3>Emergency Stop — The Most Critical Rung</h3>
+<p>Every machine controlled by a PLC must have a properly designed E-Stop circuit. Getting this wrong can kill people.</p>
+<h3>Hardware First</h3>
+<p>The E-Stop must be implemented in <strong>hardwired safety relay hardware</strong> (e.g., Pilz PNOZ, Siemens 3SK, Allen-Bradley MSR) before any PLC involvement. The PLC provides monitoring, not primary safety.</p>
+<div class="lc-warn">⚠️ <strong>Never rely on the PLC alone for E-Stop.</strong> PLCs can fail. A hardwired safety relay that cuts power to drives does not depend on the CPU running correctly.</div>
+<h3>PLC Safety Rung Pattern</h3>
+<div class="lc-demo">Rung 0: ──[/E_Stop/]──[/Guard_Open/]──( Safety_OK )──
+Rung 1: ──[ Safety_OK ]──[ Start_PB ]──( Motor_Run )──</div>
+<h3>IEC 62061 / ISO 13849 Requirements</h3>
+<ul>
+  <li>E-Stop must be self-monitoring (detected if broken)</li>
+  <li>Safety functions must be validated and documented</li>
+  <li>Use Category 3 or 4 circuits for SIL2 / PLd and above</li>
+  <li>Solid-state outputs are NOT acceptable for safety circuits — use safety-rated relays</li>
+</ul>
+<div class="lc-tip">💡 For new machines, use a dedicated Safety PLC (Siemens SIMATIC Safety, GuardLogix) that runs F-programs in a proven-safe execution environment.</div>`,
+        quiz:{ q:'Where should the primary E-Stop logic be implemented?', opts:['In a PLC ladder rung','In the HMI software','In hardwired safety relay hardware','In a software interrupt routine'], ans:2, fb:'Correct! The primary E-Stop must be implemented in dedicated safety relay hardware that is independent of the PLC. PLCs can fail — the safety system cannot rely on them.' }
+      },
+      { title:'Alarm & Fault Management', mins:6, tryTemplate:'alarmSystem',
+        html:`<h3>Alarm Management Best Practices</h3>
+<p>Poor alarm design is responsible for industrial accidents including Texas City refinery (2005) and countless other incidents. Design alarms methodically.</p>
+<h3>EEMUA 191 Guidelines</h3>
+<ul>
+  <li>Maximum 1-2 alarms per 10 minutes during normal operation</li>
+  <li>No more than 10 alarms in the first 10 minutes of an upset</li>
+  <li>Each alarm must have a clear cause, priority, and required action</li>
+</ul>
+<h3>Alarm Ladder Pattern</h3>
+<div class="lc-demo">Rung: ──[ Fault_Condition ]──(S) Fault_Bit ──
+Rung: ──[ Fault_Bit ]──( Fault_Lamp )──
+Rung: ──[ Fault_Bit ]──( Alarm_Horn )──
+Rung: ──[ Fault_Bit ]──[/ Motor_Perm/]──
+Rung: ──[ Operator_ACK ]──(R) Fault_Bit ──</div>
+<h3>Alarm Priorities</h3>
+<ul>
+  <li><strong>Critical</strong> — immediate danger, requires immediate action</li>
+  <li><strong>High</strong> — potential for process upset within minutes</li>
+  <li><strong>Medium</strong> — requires attention within the hour</li>
+  <li><strong>Low</strong> — informational, log only</li>
+</ul>
+<div class="lc-tip">💡 Always log alarm timestamps, duration, and acknowledgment to a historian. Alarm logs are required for regulatory compliance in pharma, food, and chemical industries.</div>`,
+        quiz:{ q:'According to EEMUA 191, what is the maximum acceptable alarm rate during normal operation?', opts:['1 per minute','10 per minute','1-2 per 10 minutes','Unlimited'], ans:2, fb:'Correct! EEMUA 191 recommends no more than 1-2 alarms per 10 minutes during normal operation. More than that indicates poor alarm rationalization.' }
+      }
+    ]
+  },
+  {
+    icon:'🏭', color:'#00ff88', name:'Real-World Projects',
+    lessons:[
+      { title:'Motor Starter (Full 3-Wire)', mins:8, tryTemplate:'motorStarter',
+        html:`<h3>The Complete Motor Starter Program</h3>
+<p>This is the first program every PLC programmer should master. It's in every machine on every factory floor worldwide.</p>
+<div class="lc-demo">Network 1 — Start command with seal-in:
+──[ Start_PB ]──[/ Stop_PB /]──[/ OL_Relay /]──( Motor_Run )──
+     ├──[ Motor_Run ]──┘
+
+Network 2 — Fault indicator:
+──[ OL_Relay ]──( Fault_Lamp )──
+
+Network 3 — Run indicator:
+──[ Motor_Run ]──( Run_Lamp )──</div>
+<h3>I/O Assignment</h3>
+<ul>
+  <li>Start_PB → %I0.0 (NO pushbutton, momentary)</li>
+  <li>Stop_PB → %I0.1 (NC pushbutton, wired NC to %I0.1 = TRUE normally)</li>
+  <li>OL_Relay → %I0.2 (overload relay NC contact)</li>
+  <li>Motor_Run → %Q0.0 (motor contactor coil)</li>
+  <li>Fault_Lamp → %Q0.1</li>
+</ul>
+<div class="lc-warn">⚠️ The Stop button should be wired as normally closed (NC) to the input. This means if the wire to the Stop button breaks, the motor stops — a fail-safe design.</div>
+<div class="lc-tip">💡 Click "Try in Editor" to load this template and experiment with it live in the simulator.</div>`,
+        quiz:{ q:'Why wire the Stop button as NC to the PLC input?', opts:['To save wiring','If the wire breaks, the motor stops automatically (fail-safe)','NC wiring is faster','It is purely a convention with no functional reason'], ans:1, fb:'Correct! Wiring Stop as NC means a broken wire or disconnected button causes the motor to stop — a critically important fail-safe design principle.' }
+      },
+      { title:'PID Temperature Control', mins:9, tryTemplate:'pidTemp',
+        html:`<h3>Closed-Loop PID Control</h3>
+<p>PID (Proportional-Integral-Derivative) control is the foundation of process control — heating, flow, pressure, speed. Understanding it is essential for process industries.</p>
+<h3>How PID Works</h3>
+<div class="lc-demo">Error = Setpoint (SP) - Process Variable (PV)
+
+P term: Output ∝ Error (react to current error)
+I term: Output ∝ ∫Error dt (eliminate steady-state error)
+D term: Output ∝ d(Error)/dt (dampen oscillations)
+
+Total Output = Kp×E + Ki×∫E + Kd×dE/dt</div>
+<h3>Tuning Rules of Thumb</h3>
+<ul>
+  <li><strong>P only:</strong> Always has steady-state offset — use for level control</li>
+  <li><strong>PI:</strong> Eliminates offset, may oscillate — most common for temperature</li>
+  <li><strong>PID:</strong> Fast processes with measurement noise — risk of derivative kick</li>
+</ul>
+<h3>Siemens PID_Compact</h3>
+<p>TIA Portal includes the <code>PID_Compact</code> FB with auto-tuning capability. Always run the auto-tune with the process at operating temperature for best results.</p>
+<div class="lc-tip">💡 <strong>Ziegler-Nichols tuning method:</strong> Increase Kp until the output oscillates consistently (ultimate gain Ku), measure period Pu, then: Kp=0.6Ku, Ti=0.5Pu, Td=0.125Pu.</div>`,
+        quiz:{ q:'Which PID term eliminates steady-state offset (error remaining after the process settles)?', opts:['P — Proportional','I — Integral','D — Derivative','None of them'], ans:1, fb:'Correct! The Integral term accumulates error over time and drives output until the steady-state error reaches zero. P-only control always has residual offset.' }
+      },
+      { title:'Conveyor with Safety Zones', mins:8, tryTemplate:'conveyor',
+        html:`<h3>Multi-Zone Conveyor Safety Design</h3>
+<p>Conveyors are one of the most common — and most dangerous — machines in industry. Proper safety zone design prevents amputations and fatalities.</p>
+<h3>Safety Zone Architecture</h3>
+<div class="lc-demo">Zone A ──── Zone B ──── Zone C
+Guard_A      Guard_B      Guard_C (light curtains)
+
+If ANY guard opens → stop ALL downstream zones
+Zone C motor stops, Zone B motor stops, etc.</div>
+<h3>Full Program Structure</h3>
+<div class="lc-demo">Network 1 — Safety chain:
+──[/E_Stop/]──[/Guard_A/]──[/Guard_B/]──( Safety_OK )──
+
+Network 2 — Run permissive:
+──[ Safety_OK ]──[ Run_PB ]──( Conv_Run )──
+     ├──[ Conv_Run ]──┘  (seal-in)
+
+Network 3 — Speed fault (TON):
+──[ Conv_Run ]──[/ Speed_OK /]──[TON FaultDelay PT=T#3S]──
+
+Network 4 — Fault output:
+──[ FaultDelay.Q ]──(S) Conv_Fault ──
+
+Network 5 — Fault reset:
+──[ Reset_PB ]──[/ Conv_Run /]──(R) Conv_Fault ──</div>
+<div class="lc-warn">⚠️ <strong>Real machines require risk assessment under ISO 13849.</strong> The architecture above is a simplified teaching example — a real conveyor design needs formal safety validation.</div>`,
+        quiz:{ q:'When any guard door opens on a multi-zone conveyor, which zones should stop?', opts:['Only the zone where the door opened','All zones','Only the upstream zones','No zones — guards are advisory only'], ans:1, fb:'Correct! All downstream (and ideally all) zones should stop when any guard opens. You cannot allow material to travel into an open zone.' }
+      }
+    ]
+  }
+];
+
+function buildLearn() {
+  if (document.getElementById('learnModList').children.length) {
+    updateLearnProgress(); return; // already built
+  }
+  const list = document.getElementById('learnModList');
+  list.innerHTML = '';
+  COURSE.forEach((mod, mi) => {
+    const div = document.createElement('div');
+    div.className = 'learn-mod' + (mi === 0 ? ' open' : '');
+    div.id = 'lmod_' + mi;
+    const done = mod.lessons.filter((_, li) => learnProgress[mi+'-'+li]).length;
+    div.innerHTML = `<div class="learn-mod-hdr" onclick="toggleLearnMod(${mi})">
+      <div class="learn-mod-icon" style="background:${mod.color}18;font-size:14px;">${mod.icon}</div>
+      <div class="learn-mod-info">
+        <div class="learn-mod-name">${mod.name}</div>
+        <div class="learn-mod-prog">${done}/${mod.lessons.length} lessons</div>
+      </div>
+      <span class="learn-mod-arr">▶</span>
+    </div>
+    <div class="learn-lessons" id="llessons_${mi}">
+      ${mod.lessons.map((l, li) => `
+        <div class="learn-lesson${learnProgress[mi+'-'+li] ? ' done' : ''}" id="llesson_${mi}_${li}" onclick="openLesson(${mi},${li})">
+          <div class="ll-dot"></div>
+          <span class="ll-name">${l.title}</span>
+          <span class="ll-mins">${l.mins}m</span>
+        </div>`).join('')}
+    </div>`;
+    list.appendChild(div);
+  });
+  updateLearnProgress();
+  if (!learnCurrent) openLesson(0, 0);
+}
+
+function toggleLearnMod(mi) {
+  const m = document.getElementById('lmod_' + mi);
+  m.classList.toggle('open');
+}
+
+function openLesson(mi, li) {
+  learnCurrent = { mi, li };
+  // update sidebar active state
+  document.querySelectorAll('.learn-lesson').forEach(e => e.classList.remove('active'));
+  const el = document.getElementById(`llesson_${mi}_${li}`);
+  if (el) el.classList.add('active');
+  // open the module
+  const mod = document.getElementById('lmod_' + mi);
+  if (mod && !mod.classList.contains('open')) mod.classList.add('open');
+
+  const lesson = COURSE[mi].lessons[li];
+  const totalLessons = COURSE.reduce((a, m) => a + m.lessons.length, 0);
+  const doneSoFar = Object.keys(learnProgress).length;
+  const pct = Math.round(doneSoFar / totalLessons * 100);
+  const isDone = !!learnProgress[mi + '-' + li];
+
+  document.getElementById('learnContent').innerHTML = `
+    <div class="lc-mod-label">${COURSE[mi].icon} ${COURSE[mi].name}</div>
+    <div class="lc-title">${lesson.title}</div>
+    <div class="lc-progress"><div class="lc-progress-fill" style="width:${pct}%"></div></div>
+    <div class="lc-body">${lesson.html}</div>
+    ${lesson.quiz ? buildQuiz(mi, li, lesson.quiz) : ''}`;
+
+  document.getElementById('learnActions').style.display = 'flex';
+  document.getElementById('learnDoneCheck').textContent = isDone ? '✅ Completed' : '';
+  const tryBtn = document.getElementById('learnTryBtn');
+  tryBtn.style.display = lesson.tryTemplate ? 'inline-flex' : 'none';
+  tryBtn.dataset.tpl = lesson.tryTemplate || '';
+
+  // update tutor quick questions
+  updateTutorQs(mi, li);
+}
+
+function buildQuiz(mi, li, q) {
+  const qid = `quiz_${mi}_${li}`;
+  return `<div class="quiz-block" id="${qid}">
+    <div class="quiz-label">🧠 Knowledge Check</div>
+    <div class="quiz-q">${q.q}</div>
+    <div class="quiz-opts">
+      ${q.opts.map((o, oi) => `<button class="quiz-opt" onclick="answerQuiz(${mi},${li},${oi},${q.ans},'${qid}')">${o}</button>`).join('')}
+    </div>
+    <div class="quiz-fb" id="${qid}_fb"></div>
+  </div>`;
+}
+
+function answerQuiz(mi, li, chosen, correct, qid) {
+  const block = document.getElementById(qid);
+  if (!block) return;
+  const opts = block.querySelectorAll('.quiz-opt');
+  opts.forEach(o => { o.disabled = true; });
+  opts[correct].classList.add('correct');
+  const fb = document.getElementById(qid + '_fb');
+  if (chosen === correct) {
+    opts[chosen].classList.add('correct');
+    fb.className = 'quiz-fb show ok';
+    fb.textContent = '✅ ' + COURSE[mi].lessons[li].quiz.fb;
+    markLessonDone(mi, li);
+  } else {
+    opts[chosen].classList.add('wrong');
+    fb.className = 'quiz-fb show fail';
+    fb.textContent = '❌ Not quite — the correct answer is highlighted in green. ' + COURSE[mi].lessons[li].quiz.fb;
+  }
+}
+
+function markLessonDone(mi, li) {
+  learnProgress[mi + '-' + li] = true;
+  const el = document.getElementById(`llesson_${mi}_${li}`);
+  if (el) el.classList.add('done');
+  document.getElementById('learnDoneCheck').textContent = '✅ Completed';
+  updateLearnProgress();
+}
+
+function updateLearnProgress() {
+  const total = COURSE.reduce((a, m) => a + m.lessons.length, 0);
+  const done = Object.keys(learnProgress).length;
+  const pct = Math.round(done / total * 100);
+  const fill = document.getElementById('lmProgFill');
+  const label = document.getElementById('lmProgLabel');
+  if (fill) fill.style.width = pct + '%';
+  if (label) label.textContent = done + ' / ' + total + ' lessons complete';
+  // update module progress labels
+  COURSE.forEach((mod, mi) => {
+    const d = mod.lessons.filter((_, li) => learnProgress[mi+'-'+li]).length;
+    const prog = document.querySelector('#lmod_' + mi + ' .learn-mod-prog');
+    if (prog) prog.textContent = d + '/' + mod.lessons.length + ' lessons';
+  });
+}
+
+function learnNext() {
+  if (!learnCurrent) return;
+  let { mi, li } = learnCurrent;
+  li++;
+  if (li >= COURSE[mi].lessons.length) { mi++; li = 0; }
+  if (mi >= COURSE.length) return;
+  openLesson(mi, li);
+}
+
+function learnPrev() {
+  if (!learnCurrent) return;
+  let { mi, li } = learnCurrent;
+  li--;
+  if (li < 0) { mi--; if (mi < 0) return; li = COURSE[mi].lessons.length - 1; }
+  openLesson(mi, li);
+}
+
+function learnTryInEditor() {
+  const btn = document.getElementById('learnTryBtn');
+  const tpl = btn?.dataset.tpl;
+  if (!tpl) return;
+  switchTab('editor');
+  setTimeout(() => loadTemplate(tpl), 100);
+}
+
+function updateTutorQs(mi, li) {
+  const lesson = COURSE[mi]?.lessons[li];
+  if (!lesson) return;
+  const qs = document.getElementById('tutorQs');
+  const suggestions = [
+    `Explain "${lesson.title}" in simpler terms`,
+    `Give me a real-world example of this`,
+    `What are common mistakes beginners make here?`,
+    `Quiz me on ${lesson.title}`,
+    `How does this compare to Allen-Bradley?`
+  ];
+  qs.innerHTML = `<div class="tutor-qs-lbl">Suggested questions</div>` +
+    suggestions.slice(0, 4).map(q => `<button class="tqq" onclick="tutorAsk(\`${q.replace(/\`/g, "'")}\`)">${q}</button>`).join('');
+}
+
+function addTutorMsg(role, html) {
+  const msgs = document.getElementById('tutorMsgs');
+  const d = document.createElement('div');
+  d.className = 'tmsg ' + role;
+  d.innerHTML = `<div class="tw">${role === 'ai' ? 'LadderMind Tutor' : 'You'}</div><div class="tb">${html}</div>`;
+  msgs.appendChild(d);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+
+function tutorAsk(q) {
+  document.getElementById('tutorIn').value = q;
+  tutorSend();
+}
+
+function tutorKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); tutorSend(); }
+}
+
+async function tutorSend() {
+  const ta = document.getElementById('tutorIn');
+  const msg = ta.value.trim();
+  if (!msg) return;
+  ta.value = ''; ta.style.height = 'auto';
+  addTutorMsg('usr', esc(msg));
+
+  const lessonCtx = learnCurrent
+    ? `The student is currently on lesson: "${COURSE[learnCurrent.mi].lessons[learnCurrent.li].title}" in module "${COURSE[learnCurrent.mi].name}".`
+    : '';
+
+  tutorHistory.push({ role: 'user', content: msg });
+  if (tutorHistory.length > 20) tutorHistory = tutorHistory.slice(-20);
+
+  const thinking = document.createElement('div');
+  thinking.className = 'tmsg ai';
+  thinking.innerHTML = '<div class="tw">LadderMind Tutor</div><div class="tb" style="color:var(--t3)">Thinking...</div>';
+  document.getElementById('tutorMsgs').appendChild(thinking);
+  document.getElementById('tutorMsgs').scrollTop = 999999;
+
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + _gk() },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        max_tokens: 600,
+        messages: [
+          { role: 'system', content: `You are LadderMind Tutor — a patient, enthusiastic PLC programming teacher. You are helping a student learn PLC ladder logic programming. ${lessonCtx} Keep answers concise (3-6 sentences max), educational, and practical. Use examples. If asked to quiz, generate a short 1-question quiz. Format with simple HTML: <strong>, <br>, <code> only. No markdown.` },
+          ...tutorHistory
+        ]
+      })
+    });
+    const data = await res.json();
+    const reply = data.choices?.[0]?.message?.content || 'Sorry, I had trouble responding.';
+    tutorHistory.push({ role: 'assistant', content: reply });
+    thinking.querySelector('.tb').innerHTML = reply;
+  } catch {
+    thinking.querySelector('.tb').innerHTML = '<span style="color:var(--orange)">Connection error. Check your network.</span>';
+  }
+  document.getElementById('tutorMsgs').scrollTop = 999999;
+}
 
 // ═══════════════════════════════════════════════════
 //  INIT
