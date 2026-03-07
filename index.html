@@ -448,9 +448,53 @@ body::before{content:'';position:fixed;inset:0;
 /* scan line */
 @keyframes scanline{0%{top:0;}100%{top:100%;}}
 .ladder-scroll::after{content:'';position:fixed;left:198px;right:345px;height:1px;background:linear-gradient(90deg,transparent,rgba(0,212,255,.07),transparent);animation:scanline 6s linear infinite;pointer-events:none;}
+/* ── Splash screen ── */
+#splash{
+  position:fixed;inset:0;z-index:9999;
+  background:var(--bg);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:0;
+  transition:opacity .55s ease, visibility .55s ease;
+}
+#splash.hidden{opacity:0;visibility:hidden;pointer-events:none;}
+.splash-logo{
+  font-family:var(--mono);font-size:clamp(32px,6vw,56px);font-weight:900;
+  letter-spacing:6px;color:var(--bright);text-transform:uppercase;
+  line-height:1;
+}
+.splash-logo em{color:var(--cyan);font-style:normal;}
+.splash-v{font-family:var(--mono);font-size:11px;letter-spacing:3px;color:var(--t3);margin-top:4px;text-align:center;}
+.splash-bar-wrap{
+  width:220px;height:2px;background:var(--s3);border-radius:2px;
+  margin-top:36px;overflow:hidden;
+}
+.splash-bar{
+  height:100%;width:0%;background:linear-gradient(90deg,var(--cyan),var(--green));
+  border-radius:2px;
+  animation:splashfill 1.8s cubic-bezier(.4,0,.2,1) forwards;
+}
+@keyframes splashfill{0%{width:0%}60%{width:75%}85%{width:92%}100%{width:100%}}
+.splash-tag{
+  font-family:var(--mono);font-size:10px;letter-spacing:2px;
+  color:var(--t3);margin-top:16px;text-transform:uppercase;
+}
+.splash-by{
+  position:absolute;bottom:32px;
+  font-family:var(--mono);font-size:11px;letter-spacing:1.5px;
+  color:var(--t3);
+}
+.splash-by span{color:var(--cyan);}
 </style>
 </head>
 <body>
+
+<!-- SPLASH SCREEN -->
+<div id="splash">
+  <div class="splash-logo">LADDER<em>MIND</em></div>
+  <div class="splash-v">v3 &nbsp;·&nbsp; IEC 61131-3 PLC Editor + Simulator</div>
+  <div class="splash-bar-wrap"><div class="splash-bar"></div></div>
+  <div class="splash-tag">Loading workspace…</div>
+  <div class="splash-by">Developed by <span>Wassim Omran</span></div>
+</div>
 
 <!-- TOPBAR -->
 <div class="topbar">
@@ -3301,6 +3345,12 @@ async function tutorSend() {
 // ═══════════════════════════════════════════════════
 buildToolbox();
 render();
+
+// Dismiss splash after bar animation finishes
+setTimeout(() => {
+  const s = document.getElementById('splash');
+  if (s) s.classList.add('hidden');
+}, 2100);
 </script>
 </body>
 </html>
