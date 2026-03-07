@@ -865,14 +865,62 @@ function mkRung(elems = [], comment = '') {
   return { id: uid(), comment, pre: [], branches: [elems], post: [], powered: false };
 }
 
-// ── Branch helpers ──
-const allBranchElems = r => [...(r.pre||[]), ...(r.branches || [r.elements||[]]).flat(), ...(r.post||[])];
+// ── Deep cell helpers (elements OR inline _group nodes) ──
+function flattenCells(cells) {
+  const out = [];
+  for (const c of (cells||[])) {
+    if (c._group) c.branches.forEach(br => out.push(...flattenCells(br)));
+    else out.push(c);
+  }
+  return out;
+}
+// Returns {arr, idx, el} for direct mutation
+function findInCells(cells, eid) {
+  for (let i = 0; i < cells.length; i++) {
+    const c = cells[i];
+    if (c._group) {
+      for (const br of c.branches) { const f = findInCells(br, eid); if (f) return f; }
+    } else if (c.id === eid) { return { arr: cells, idx: i, el: c }; }
+  }
+  return null;
+}
+function removeFromCells(cells, eid) {
+  for (let i = 0; i < cells.length; i++) {
+    const c = cells[i];
+    if (c._group) { for (const br of c.branches) { if (removeFromCells(br, eid)) return true; } }
+    else if (c.id === eid) { cells.splice(i, 1); return true; }
+  }
+  return false;
+}
+function reIdCells(cells) {
+  (cells||[]).forEach(c => {
+    c.id = uid(); c._pw = false;
+    if (c._group) c.branches.forEach(br => reIdCells(br));
+  });
+}
+function findGroupInCells(cells, gid) {
+  for (const c of (cells||[])) {
+    if (c._group) {
+      if (c.id === gid) return c;
+      for (const br of c.branches) { const f = findGroupInCells(br, gid); if (f) return f; }
+    }
+  }
+  return null;
+}
+function findGroupInRung(rung, gid) {
+  const allArrs = [rung.pre||[], ...(rung.branches||[]), rung.post||[]];
+  for (const arr of allArrs) { const f = findGroupInCells(arr, gid); if (f) return f; }
+  return null;
+}
+
+const allBranchElems = r => [...flattenCells(r.pre||[]), ...(r.branches||[r.elements||[]]).flatMap(br => flattenCells(br)), ...flattenCells(r.post||[])];
 function normBranches(r) { if (!r.branches) { r.branches = [r.elements||[]]; delete r.elements; } if (!r.post) r.post = []; if (!r.pre) r.pre = []; return r; }
 function findInBranches(rung, eid) {
-  if (rung.pre)  { const el = rung.pre.find(e => e.id === eid);  if (el) return { el, section: 'pre',  bi: -1 }; }
-  if (rung.post) { const el = rung.post.find(e => e.id === eid); if (el) return { el, section: 'post', bi: -1 }; }
+  let f;
+  if ((f = findInCells(rung.pre||[], eid)))  return { el: f.el, section: 'pre',  bi: -1, _ref: f };
+  if ((f = findInCells(rung.post||[], eid))) return { el: f.el, section: 'post', bi: -1, _ref: f };
   const br = rung.branches || [rung.elements||[]];
-  for (let bi = 0; bi < br.length; bi++) { const el = br[bi].find(e => e.id === eid); if (el) return { el, section: 'branch', bi }; }
+  for (let bi = 0; bi < br.length; bi++) { if ((f = findInCells(br[bi], eid))) return { el: f.el, section: 'branch', bi, _ref: f }; }
   return null;
 }
 
@@ -978,6 +1026,36 @@ function render() {
   updStats();
 }
 
+// Render a cell: either an inline group or a plain element
+function renderCell(c, rung, pw) {
+  return c._group ? renderGroup(c, rung, pw) : renderElem(c, rung);
+}
+
+// Renders an inline parallel group (sits between series elements)
+function renderGroup(group, rung, pw) {
+  const gid = group.id, rid = rung.id;
+  const rows = group.branches.map((branch, bi) => {
+    const bpw = branch.length && branch[branch.length-1]._pw && simActive;
+    const delBtn = bi > 0
+      ? `<button class="del-branch-btn" onclick="event.stopPropagation();delGroupBranch('${rid}','${gid}',${bi})" title="Remove branch">✕</button>` : '';
+    return `<div class="par-branch" data-bi="${bi}"
+      ondragover="tbBranchDragOver(event)" ondragleave="tbBranchDragLeave(event)"
+      ondrop="tbGroupBranchDrop(event,'${rid}','${gid}',${bi})">
+      ${bi > 0 ? `<span class="branch-label">B${bi+1}</span>` : ''}
+      <div class="wire" style="width:4px;"></div>
+      ${branch.map(c => renderCell(c, rung, pw)).join('')}
+      <div class="wire fw ${bpw ? 'pw' : ''}"></div>
+      <button class="add-el-btn" onclick="event.stopPropagation();openAddMenuInGroup('${rid}','${gid}',${bi},event)" title="Add element">+</button>
+      ${delBtn}
+    </div>`;
+  }).join('');
+  return `<div class="par-outer" style="display:inline-flex;vertical-align:middle;flex-shrink:0;">
+    <div class="par-vrail ${pw ? 'pw' : ''}"></div>
+    <div class="par-stack">${rows}</div>
+    <div class="par-vrail ${pw ? 'pw' : ''}"></div>
+  </div>`;
+}
+
 function renderBranches(rung, pw) {
   const id = rung.id;
   const branches = rung.branches;
@@ -988,7 +1066,7 @@ function renderBranches(rung, pw) {
   // Pre-section HTML (series elements BEFORE the parallel fork)
   const preHtml = multi ? `
     <div class="par-pre-drop" ondragover="tbBranchDragOver(event)" ondragleave="tbBranchDragLeave(event)" ondrop="tbBranchDrop(event,'${id}','pre')" title="Drop here for series elements before the parallel block">
-    ${pre.map(el => renderElem(el, rung)).join('')}
+    ${pre.map(c => renderCell(c, rung, pw)).join('')}
     <button class="add-el-btn" onclick="event.stopPropagation();openAddMenu('${id}','pre',event)" title="Add series element before fork" style="opacity:.6;font-size:9px;padding:0 5px;">+Pre</button>
     </div>` : '';
 
@@ -996,7 +1074,7 @@ function renderBranches(rung, pw) {
   const postHtml = multi ? `
     <div class="wire" style="width:6px;"></div>
     <div class="par-post-drop" ondragover="tbBranchDragOver(event)" ondragleave="tbBranchDragLeave(event)" ondrop="tbBranchDrop(event,'${id}','post')" title="Drop here for shared outputs">
-    ${post.map(el => renderElem(el, rung)).join('')}
+    ${post.map(c => renderCell(c, rung, pw)).join('')}
     <div class="wire fw ${pw ? 'pw' : ''}"></div>
     <button class="add-el-btn" onclick="event.stopPropagation();openAddMenu('${id}','post',event)" title="Add shared output (after merge)">+</button>
     </div>` : '';
@@ -1005,7 +1083,7 @@ function renderBranches(rung, pw) {
     // Single branch — flat layout
     const branch = branches[0];
     return `<div class="wire" style="width:8px;"></div>
-      ${branch.map(el => renderElem(el, rung)).join('')}
+      ${branch.map(c => renderCell(c, rung, pw)).join('')}
       <div class="wire fw ${pw ? 'pw' : ''}"></div>
       <button class="add-el-btn" onclick="event.stopPropagation();openAddMenu('${id}',0,event)" title="Add element">+</button>
       <button class="add-branch-btn" onclick="event.stopPropagation();addBranch('${id}')" title="Add parallel branch">⊕ Branch</button>`;
@@ -1023,7 +1101,7 @@ function renderBranches(rung, pw) {
       ondrop="tbBranchDrop(event,'${id}',${bi})">
       ${bi > 0 ? `<span class="branch-label">B${bi+1}</span>` : ''}
       <div class="wire" style="width:6px;"></div>
-      ${branch.map(el => renderElem(el, rung)).join('')}
+      ${branch.map(c => renderCell(c, rung, pw)).join('')}
       <div class="wire fw ${bpw ? 'pw' : ''}"></div>
       <button class="add-el-btn" onclick="event.stopPropagation();openAddMenu('${id}',${bi},event)" title="Add element to this branch">+</button>
       ${delBtn}
@@ -1050,19 +1128,92 @@ function addBranch(rungId) {
   render();
 }
 
-// Called by the per-element ⊕ button — adds a new branch then immediately
-// opens the element picker scoped to that new branch row.
-function addBranchAndOpen(rungId, evt) {
+// ── Inline group (per-element parallel) ──
+// Wraps a single element in an inline _group so only that position is parallel.
+function wrapElemInGroup(rungId, elemId, evt) {
   evt.stopPropagation();
-  rungId = rungId || selRungId || (rungs[0] && rungs[0].id);
   const r = rungs.find(r => r.id === rungId);
   if (!r) return;
   normBranches(r);
-  r.branches.push([]);
-  selRungId = rungId;
+  const allArrs = [r.pre, ...r.branches, r.post];
+  for (const arr of allArrs) {
+    const f = findInCells(arr, elemId);
+    if (f) {
+      const group = { _group: true, id: uid(), branches: [[f.el], []] };
+      f.arr.splice(f.idx, 1, group);
+      selRungId = rungId;
+      render();
+      // Open picker for the new empty branch
+      openAddMenuInGroup(rungId, group.id, 1, evt);
+      return;
+    }
+  }
+}
+
+function addGroupBranch(rungId, gid, evt) {
+  const r = rungs.find(r => r.id === rungId);
+  if (!r) return;
+  normBranches(r);
+  const group = findGroupInRung(r, gid);
+  if (!group) return;
+  group.branches.push([]);
   render();
-  const newBi = r.branches.length - 1;
-  openAddMenu(rungId, newBi, evt);
+  openAddMenuInGroup(rungId, gid, group.branches.length - 1, evt);
+}
+
+function delGroupBranch(rungId, gid, bi) {
+  const r = rungs.find(r => r.id === rungId);
+  if (!r) return;
+  normBranches(r);
+  const group = findGroupInRung(r, gid);
+  if (!group || group.branches.length <= 1) return;
+  group.branches.splice(bi, 1);
+  render();
+}
+
+function openAddMenuInGroup(rungId, gid, bi, evt) {
+  document.querySelectorAll('.ctx-menu').forEach(m => m.remove());
+  const menu = document.createElement('div');
+  menu.className = 'ctx-menu';
+  menu.style.cssText = `position:fixed;z-index:999;background:var(--s1);border:1px solid var(--b2);border-radius:4px;padding:5px;min-width:170px;max-height:360px;overflow-y:auto;box-shadow:0 10px 36px rgba(0,0,0,.6);`;
+  menu.style.left = Math.min(evt.clientX, window.innerWidth - 185) + 'px';
+  menu.style.top = Math.min(evt.clientY - 10, window.innerHeight - 380) + 'px';
+  TB_GROUPS.forEach(g => {
+    const hdr = document.createElement('div');
+    hdr.style.cssText = 'padding:4px 10px 2px;font-size:8px;font-weight:700;letter-spacing:2px;color:var(--t3);text-transform:uppercase;';
+    hdr.textContent = g.name;
+    menu.appendChild(hdr);
+    g.items.forEach(item => {
+      const d = document.createElement('div');
+      d.style.cssText = 'padding:5px 10px;font-size:11px;font-weight:600;cursor:pointer;border-radius:2px;color:var(--t2);transition:all .1s;display:flex;align-items:center;gap:8px;';
+      d.innerHTML = `<span style="color:${item.color};font-family:var(--mono);font-size:9px;min-width:36px;">${item.sub.slice(0,8)}</span><span>${item.label}</span>`;
+      d.onmouseenter = () => { d.style.background = 'var(--s3)'; d.style.color = 'var(--bright)'; };
+      d.onmouseleave = () => { d.style.background = ''; d.style.color = 'var(--t2)'; };
+      d.onclick = () => { insertElemInGroup(item.type, rungId, gid, bi); menu.remove(); };
+      menu.appendChild(d);
+    });
+  });
+  document.body.appendChild(menu);
+  setTimeout(() => { const cls = e => { if (!menu.contains(e.target)) { menu.remove(); document.removeEventListener('click', cls); } }; document.addEventListener('click', cls); }, 10);
+}
+
+function insertElemInGroup(type, rungId, gid, bi) {
+  const r = rungs.find(r => r.id === rungId);
+  if (!r) return;
+  normBranches(r);
+  const group = findGroupInRung(r, gid);
+  if (!group) return;
+  if (!group.branches[bi]) group.branches[bi] = [];
+  group.branches[bi].push(mkElem(type));
+  render();
+}
+
+function tbGroupBranchDrop(e, rungId, gid, bi) {
+  if (!tbDragType) return;
+  e.preventDefault(); e.stopPropagation();
+  e.currentTarget.style.outline = '';
+  insertElemInGroup(tbDragType, rungId, gid, bi);
+  tbDragType = null;
 }
 
 function delBranch(rungId, bi) {
@@ -1201,7 +1352,7 @@ function renderElem(el, rung) {
   return `${wir}<div class="elem-wrap"><div class="${cls}" data-id="${el.id}" data-rid="${rung.id}"
     onclick="event.stopPropagation();selElem('${el.id}','${rung.id}')"
     ondblclick="event.stopPropagation();openEditPop('${el.id}','${rung.id}',event)"
-    title="Dbl-click to edit">${inner}</div><button class="elem-par-btn" onclick="addBranchAndOpen('${rung.id}',event)" title="Add parallel branch here">⊕</button></div>`;
+    title="Dbl-click to edit">${inner}</div><button class="elem-par-btn" onclick="wrapElemInGroup('${rung.id}','${el.id}',event)" title="Add parallel branch for this element only">⊕</button></div>`;
 }
 
 function updStats() {
@@ -1237,9 +1388,9 @@ function dupRung() {
   const copy = JSON.parse(JSON.stringify(src));
   normBranches(copy);
   copy.id = uid();
-  copy.pre.forEach(e => { e.id = uid(); e._pw = false; });
-  copy.branches.forEach(br => br.forEach(e => { e.id = uid(); e._pw = false; }));
-  copy.post.forEach(e => { e.id = uid(); e._pw = false; });
+  reIdCells(copy.pre);
+  copy.branches.forEach(br => reIdCells(br));
+  reIdCells(copy.post);
   const i = rungs.findIndex(r => r.id === selRungId);
   rungs.splice(i + 1, 0, copy); render();
 }
@@ -1303,16 +1454,8 @@ function delElem() {
   const r = rungs.find(r => r.id === selRungId);
   if (!r) return;
   normBranches(r);
-  // Check pre section first
-  const pri = r.pre.findIndex(e => e.id === selElemId);
-  if (pri !== -1) { r.pre.splice(pri, 1); selElemId = null; render(); return; }
-  // Check post section
-  const pi = r.post.findIndex(e => e.id === selElemId);
-  if (pi !== -1) { r.post.splice(pi, 1); selElemId = null; render(); return; }
-  for (let bi = 0; bi < r.branches.length; bi++) {
-    const idx = r.branches[bi].findIndex(e => e.id === selElemId);
-    if (idx !== -1) { r.branches[bi].splice(idx, 1); selElemId = null; render(); return; }
-  }
+  const allArrs = [r.pre, ...r.branches, r.post];
+  for (const arr of allArrs) { if (removeFromCells(arr, selElemId)) { selElemId = null; render(); return; } }
 }
 
 // ═══════════════════════════════════════════════════
@@ -1397,14 +1540,8 @@ function delElemFromPop(eid, rid) {
   const r = rungs.find(r => r.id === rid);
   if (!r) return;
   normBranches(r);
-  const pri = r.pre.findIndex(e => e.id === eid);
-  if (pri !== -1) { r.pre.splice(pri, 1); selElemId = null; render(); return; }
-  const pi = r.post.findIndex(e => e.id === eid);
-  if (pi !== -1) { r.post.splice(pi, 1); selElemId = null; render(); return; }
-  for (let bi = 0; bi < r.branches.length; bi++) {
-    const idx = r.branches[bi].findIndex(e => e.id === eid);
-    if (idx !== -1) { r.branches[bi].splice(idx, 1); selElemId = null; render(); return; }
-  }
+  const allArrs = [r.pre, ...r.branches, r.post];
+  for (const arr of allArrs) { if (removeFromCells(arr, eid)) { selElemId = null; render(); return; } }
 }
 
 function closeEditPop() { document.querySelectorAll('.epop').forEach(p => p.remove()); }
@@ -1507,78 +1644,52 @@ function simLoop() {
   setTimeout(simLoop, 280);
 }
 
+// Recursively evaluates a cell array in series; returns final power level.
+// Inline _group nodes evaluate as OR across their sub-branches.
+function evalCellsArr(cells, pwr, tags) {
+  let p = pwr;
+  (cells||[]).forEach(el => {
+    if (el._group) {
+      let gPwr = false;
+      el.branches.forEach(sub => { if (evalCellsArr(sub, p, tags)) gPwr = true; });
+      el._pw = gPwr; p = gPwr;
+      return;
+    }
+    if (el.t === 'contact') {
+      const state = !!tags[el.label];
+      const pass = el.sub === 'nc' ? !state : state;
+      el._pw = p && pass; p = p && pass;
+    } else if (el.t === 'coil') {
+      el._pw = p;
+      if (p) {
+        if (el.sub === 'out') tags[el.label] = true;
+        else if (el.sub === 'set') tags[el.label] = true;
+        else if (el.sub === 'res') tags[el.label] = false;
+      }
+    } else if (el.t === 'ff') {
+      const s = !!tags[el.s], r2 = !!tags[el.r];
+      el._pw = p;
+      if (p) {
+        if (el.sub === 'sr') { if (s) tags[el.addr] = true; if (r2 && !s) tags[el.addr] = false; }
+        else { if (r2) tags[el.addr] = false; if (s && !r2) tags[el.addr] = true; }
+      }
+    } else if (el.t === 'special' && el.sub === 'not') {
+      el._pw = p; p = !p;
+    } else {
+      el._pw = p;
+    }
+  });
+  return p;
+}
+
 function evalLogic() {
   const tags = { ...simInputs };
   rungs.forEach(rung => {
     normBranches(rung);
-
-    // ── PRE: series elements before the parallel fork ──
-    let prePwr = true;
-    (rung.pre || []).forEach(el => {
-      if (el.t === 'contact') {
-        const state = !!tags[el.label];
-        const pass = el.sub === 'nc' ? !state : state;
-        el._pw = prePwr && pass; prePwr = prePwr && pass;
-      } else if (el.t === 'coil') {
-        el._pw = prePwr;
-        if (prePwr) {
-          if (el.sub === 'out') tags[el.label] = true;
-          else if (el.sub === 'set') tags[el.label] = true;
-          else if (el.sub === 'res') tags[el.label] = false;
-        }
-      } else if (el.t === 'special' && el.sub === 'not') {
-        el._pw = prePwr; prePwr = !prePwr;
-      } else { el._pw = prePwr; }
-    });
-
-    // ── BRANCHES: each branch starts with pre's output power (AND then OR) ──
+    const prePwr = evalCellsArr(rung.pre, true, tags);
     let rungPwr = false;
-    rung.branches.forEach(branch => {
-      let pwr = prePwr;
-      branch.forEach(el => {
-        if (el.t === 'contact') {
-          const state = !!tags[el.label];
-          const pass = el.sub === 'nc' ? !state : state;
-          el._pw = pwr && pass; pwr = pwr && pass;
-        } else if (el.t === 'coil') {
-          el._pw = pwr;
-          if (pwr) {
-            if (el.sub === 'out') tags[el.label] = true;
-            else if (el.sub === 'set') tags[el.label] = true;
-            else if (el.sub === 'res') tags[el.label] = false;
-          }
-        } else if (el.t === 'ff') {
-          const s = !!tags[el.s], r2 = !!tags[el.r];
-          el._pw = pwr;
-          if (pwr) {
-            if (el.sub === 'sr') { if (s) tags[el.addr] = true; if (r2 && !s) tags[el.addr] = false; }
-            else { if (r2) tags[el.addr] = false; if (s && !r2) tags[el.addr] = true; }
-          }
-        } else if (el.t === 'special' && el.sub === 'not') {
-          el._pw = pwr; pwr = !pwr;
-        } else {
-          el._pw = pwr;
-        }
-      });
-      if (pwr) rungPwr = true; // OR: any branch powered = rung powered
-    });
-
-    // ── POST: shared outputs after the merge point ──
-    let postPwr = rungPwr;
-    rung.post.forEach(el => {
-      if (el.t === 'contact') {
-        const state = !!tags[el.label];
-        const pass = el.sub === 'nc' ? !state : state;
-        el._pw = postPwr && pass; postPwr = postPwr && pass;
-      } else if (el.t === 'coil') {
-        el._pw = postPwr;
-        if (postPwr) {
-          if (el.sub === 'out') tags[el.label] = true;
-          else if (el.sub === 'set') tags[el.label] = true;
-          else if (el.sub === 'res') tags[el.label] = false;
-        }
-      } else { el._pw = postPwr; }
-    });
+    rung.branches.forEach(branch => { if (evalCellsArr(branch, prePwr, tags)) rungPwr = true; });
+    evalCellsArr(rung.post, rungPwr, tags);
     rung.powered = rungPwr;
   });
 }
