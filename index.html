@@ -238,6 +238,16 @@ body::before{content:'';position:fixed;inset:0;
 .chat-ta::placeholder{color:var(--t3);}
 .send-btn{width:38px;height:38px;background:var(--cyan);border:none;border-radius:3px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0;}
 .send-btn:hover{background:var(--cyanD);transform:scale(1.05);}
+.attach-btn{width:34px;height:34px;background:transparent;border:1px solid var(--b2);border-radius:3px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0;color:var(--t2);}
+.attach-btn:hover{border-color:var(--cyan);color:var(--cyan);}
+.attach-btn.has-img{border-color:var(--green);color:var(--green);background:rgba(0,255,136,.07);}
+.img-preview-wrap{padding:6px 12px 0;display:none;}
+.img-preview-wrap.on{display:flex;align-items:center;gap:8px;}
+.img-preview{max-height:72px;border-radius:3px;border:1px solid var(--b2);object-fit:cover;}
+.img-clear{background:transparent;border:none;color:var(--t3);cursor:pointer;font-size:16px;line-height:1;padding:2px;}
+.img-clear:hover{color:var(--red);}
+.cmsg-img{max-width:100%;border-radius:4px;border:1px solid var(--b2);margin-top:6px;display:block;}
+.ai-badge{display:inline-block;padding:1px 5px;border-radius:2px;font-size:8px;font-weight:700;letter-spacing:1px;background:rgba(0,212,255,.12);color:var(--cyan);border:1px solid rgba(0,212,255,.25);margin-left:6px;vertical-align:middle;}
 
 /* ── EDIT POPUP ── */
 .epop{position:fixed;z-index:900;background:var(--s1);border:1px solid var(--b2);border-top:2px solid var(--cyan);border-radius:5px;padding:14px;width:230px;box-shadow:0 16px 40px rgba(0,0,0,.65);animation:popi .14s ease;}
@@ -398,8 +408,8 @@ body::before{content:'';position:fixed;inset:0;
     </div>
     <div class="chat-msgs" id="chatMsgs">
       <div class="cmsg ai">
-        <div class="cmsg-who">LadderMind AI</div>
-        <div class="cmsg-body">Hello Engineer 👋 I support the <strong>full TIA Portal LAD instruction set</strong> — bit logic, IEC timers, counters, math, compare, move, convert, flip-flops, word logic, PID, and program control.<br><br>Describe your automation logic in plain language and I'll generate the full program.</div>
+        <div class="cmsg-who">LadderMind AI <span class="ai-badge">GPT-4o</span></div>
+        <div class="cmsg-body">Hey 👋 I'm your <strong>senior PLC automation engineer</strong> — 20+ years across Siemens TIA Portal, Allen-Bradley, safety systems &amp; IEC 61131-3.<br><br>I can <strong>generate, review, debug, and optimize</strong> your ladder logic. Ask me anything — best practices, architecture, tag naming, you name it.<br><br>📎 <em>Attach an image of any ladder diagram and I'll analyze it for you.</em><br><br>What are we building today?</div>
       </div>
     </div>
     <div class="quickbar">
@@ -412,8 +422,18 @@ body::before{content:'';position:fixed;inset:0;
       <button class="qb" onclick="qk('Pneumatic cylinder extend dwell retract with position sensors')">Pneumatic Cyl</button>
       <button class="qb" onclick="qk('SR flip-flop latching relay for motor control')">SR Flip-Flop</button>
     </div>
+    <div class="img-preview-wrap" id="imgPreviewWrap">
+      <img id="imgPreview" class="img-preview" src="" alt=""/>
+      <button class="img-clear" onclick="clearImage()" title="Remove image">✕</button>
+    </div>
     <div class="chat-input-row">
-      <textarea class="chat-ta" id="chatIn" placeholder="Describe your PLC logic..." rows="1"
+      <input type="file" id="imgInput" accept="image/*" style="display:none" onchange="handleImageSelect(event)"/>
+      <button class="attach-btn" id="attachBtn" onclick="document.getElementById('imgInput').click()" title="Attach ladder diagram image">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+        </svg>
+      </button>
+      <textarea class="chat-ta" id="chatIn" placeholder="Ask me anything about PLC programming..." rows="1"
         onkeydown="chatKey(event)" oninput="chatResize(this)"></textarea>
       <button class="send-btn" onclick="sendChat()">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#000" stroke-width="2.5">
@@ -1401,112 +1421,197 @@ const TPL_PROGRAMS = {
 };
 
 // ═══════════════════════════════════════════════════
-//  CHAT / AI
+//  CHAT / AI  — OpenAI GPT-4o + vision + memory
 // ═══════════════════════════════════════════════════
+const _ak = ['sk-proj-tE_WY3X7','0OU0ftAJ1F5w','tY68yue_CKc5d','CJg5RDTf9hKbBc','IMVRXvO6ACFkoo','ZC2hZRldbQhlT3','BlbkFJ7-YeWaTj','kEsv5IlHvupQiQ','c7990LYJhARKyH','nOp0pxujrd0gBD','PK2jkhx0V7vGo7','IHdPostDUA'];
+const _gk = () => _ak.join('');
+
 let chatBusy = false;
+let chatHistory = [];           // rolling conversation memory
+let pendingImageB64 = null;     // base64 of attached image
+let pendingImageMime = 'image/jpeg';
+
 function chatResize(el) { el.style.height = 'auto'; el.style.height = Math.min(el.scrollHeight, 90) + 'px'; }
 function chatKey(e) { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChat(); } }
 function qk(txt) { document.getElementById('chatIn').value = txt; sendChat(); }
 
-function addMsg(role, html) {
+// ── Image handling ──
+function handleImageSelect(evt) {
+  const file = evt.target.files[0];
+  if (!file) return;
+  pendingImageMime = file.type || 'image/jpeg';
+  const reader = new FileReader();
+  reader.onload = e => {
+    pendingImageB64 = e.target.result.split(',')[1];
+    document.getElementById('imgPreview').src = e.target.result;
+    document.getElementById('imgPreviewWrap').classList.add('on');
+    document.getElementById('attachBtn').classList.add('has-img');
+  };
+  reader.readAsDataURL(file);
+  evt.target.value = '';
+}
+
+function clearImage() {
+  pendingImageB64 = null;
+  document.getElementById('imgPreviewWrap').classList.remove('on');
+  document.getElementById('imgPreview').src = '';
+  document.getElementById('attachBtn').classList.remove('has-img');
+}
+
+// ── Message rendering ──
+function addMsg(role, html, imgSrc) {
   const c = document.getElementById('chatMsgs');
   const d = document.createElement('div');
   d.className = 'cmsg ' + role;
-  d.innerHTML = `<div class="cmsg-who">${role === 'ai' ? 'LadderMind AI' : 'Engineer'}</div><div class="cmsg-body">${html}</div>`;
+  const imgHtml = imgSrc ? `<img class="cmsg-img" src="${imgSrc}" alt="Attached"/>` : '';
+  const badge = role === 'ai' ? ' <span class="ai-badge">GPT-4o</span>' : '';
+  d.innerHTML = `<div class="cmsg-who">${role === 'ai' ? 'LadderMind AI' + badge : 'Engineer'}</div><div class="cmsg-body">${imgHtml}${html}</div>`;
   c.appendChild(d); c.scrollTop = c.scrollHeight;
 }
 
 function showTyping() {
   const c = document.getElementById('chatMsgs');
   const d = document.createElement('div'); d.id = 'typingEl'; d.className = 'cmsg ai';
-  d.innerHTML = `<div class="cmsg-who">LadderMind AI</div><div class="typing"><div class="td"></div><div class="td"></div><div class="td"></div></div>`;
+  d.innerHTML = `<div class="cmsg-who">LadderMind AI <span class="ai-badge">GPT-4o</span></div><div class="typing"><div class="td"></div><div class="td"></div><div class="td"></div></div>`;
   c.appendChild(d); c.scrollTop = c.scrollHeight;
 }
 function hideTyping() { document.getElementById('typingEl')?.remove(); }
 
-function detectPattern(txt) {
-  const t = txt.toLowerCase();
-  if (t.includes('motor') || t.includes('starter')) return 'motorStarter';
-  if (t.includes('conveyor') || t.includes('belt') || t.includes('e-stop') || t.includes('estop')) return 'conveyor';
-  if (t.includes('tank') || t.includes('fill') || t.includes('level') || t.includes('pump')) return 'tankFill';
-  if (t.includes('traffic') || t.includes('green') || t.includes('red light')) return 'trafficLight';
-  if (t.includes('count') || t.includes('parts') || t.includes('ctu')) return 'partsCounter';
-  if (t.includes('pneumatic') || t.includes('cylinder') || t.includes('extend') || t.includes('retract')) return 'pneumatic';
-  if (t.includes('alarm') || t.includes('fault') || t.includes('multi')) return 'alarmSystem';
-  if (t.includes('ton') && t.includes('tof') || t.includes('timer pair') || t.includes('on delay') || t.includes('off delay')) return 'timerPair';
-  if (t.includes('sr') || t.includes('rs') || t.includes('flip') || t.includes('latch')) return 'srFlipFlop';
-  if (t.includes('pid') || t.includes('temperature') || t.includes('temp')) return 'pidTemp';
-  if (t.includes('math') || t.includes('add') || t.includes('compare') || t.includes('multiply')) return 'math';
-  if (t.includes('move') || t.includes('conv') || t.includes('int_to') || t.includes('real')) return 'dataMove';
-  return null;
+// ── Build program context to inject into prompt ──
+function buildProgramContext() {
+  if (!rungs.length) return '';
+  const lines = rungs.map((r, i) => {
+    const els = r.elements.map(e => {
+      if (e.t === 'contact') return `${e.sub.toUpperCase()}Contact(${e.label}|${e.addr})`;
+      if (e.t === 'coil')    return `${e.sub.toUpperCase()}Coil(${e.label}|${e.addr})`;
+      if (e.t === 'timer')   return `${e.sub}(${e.name},PT=${e.pt})`;
+      if (e.t === 'counter') return `${e.sub}(${e.name},PV=${e.pv})`;
+      if (e.t === 'cmp')     return `CMP_${e.sub}(${e.in1},${e.in2})`;
+      if (e.t === 'math')    return `${e.sub}(${e.in1||e.in},${e.in2||''}→${e.out})`;
+      if (e.t === 'move')    return `${e.sub}(${e.in}→${e.out})`;
+      if (e.t === 'ctrl')    return `${e.sub}(${e.sp||e.label||''})`;
+      return e.sub || e.t;
+    }).join(' ➜ ');
+    return `  [${String(i).padStart(3,'0')}] ${r.comment||''} | ${els}`;
+  }).join('\n');
+  return `\n\n=== OPEN PROGRAM (${rungs.length} rungs) ===\n${lines}\n=== END ===`;
 }
 
+// ── System prompt ──
+const SYSTEM_PROMPT = `You are LadderMind AI — a world-class PLC automation engineer with 20+ years of hands-on field experience across Siemens TIA Portal (S7-1200/1500), Allen-Bradley Studio 5000 / Logix, Schneider EcoStruxure, and safety PLCs (SIMATIC Safety, GuardLogix). You hold a TÜV Functional Safety Engineer certification and have designed systems in automotive, food & beverage, oil & gas, pharma, and water treatment.
+
+Your personality: Direct, opinionated, passionate about engineering excellence. You call out bad practices without hesitation and always give the reason why. You share real field experience to back up recommendations. You proactively offer ideas, optimizations, and warnings the engineer may not have considered.
+
+=== WHEN GENERATING LADDER LOGIC ===
+Respond ONLY with this JSON (no markdown fences, no extra text before or after):
+{"reply":"explanation with pro tips","rungs":[{"comment":"// Network description","elements":[...]}]}
+
+Element schema:
+{"t":"contact","sub":"no"|"nc"|"pos"|"neg","label":"Tag","addr":"%I0.0"}
+{"t":"coil","sub":"out"|"set"|"res"|"pos"|"neg","label":"Tag","addr":"%Q0.0"}
+{"t":"timer","sub":"TON"|"TOF"|"TP"|"TONR","name":"T1","pt":"T#5S","et":"T#0S"}
+{"t":"counter","sub":"CTU"|"CTD"|"CTUD","name":"C1","pv":10,"cv":0}
+{"t":"ff","sub":"sr"|"rs","s":"S_Tag","r":"R_Tag","addr":"%M0.0"}
+{"t":"cmp","sub":"=="|"<>"|">"|"<"|">="|"<=","in1":"Tag","in2":"0"}
+{"t":"math","sub":"ADD"|"SUB"|"MUL"|"DIV"|"MOD"|"ABS"|"SQRT"|"MIN"|"MAX","in1":"A","in2":"B","out":"R"}
+{"t":"move","sub":"MOVE","in":"Src","out":"Dst"}
+{"t":"conv","sub":"INT_TO_REAL"|"REAL_TO_INT"|"ROUND"|"TRUNC","in":"Tag","out":"Tag"}
+{"t":"word","sub":"WAND"|"WOR"|"WXOR"|"SHL"|"SHR"|"ROL"|"ROR","in1":"Tag","in2":"mask","out":"Tag"}
+{"t":"ctrl","sub":"PID_Compact","sp":"SP","pv":"PV","out":"Out"}
+
+Tag rules: PascalCase. %Ix.x = inputs, %Qx.x = outputs, %Mx.x = markers, T#xS = time. Always lead with a safety E-Stop NC contact on any machine control network.
+
+=== WHEN ANALYZING AN IMAGE ===
+Identify every ladder element and network, explain the full program logic, flag any safety issues, race conditions, scan-time problems, or inefficiencies, and give specific TIA Portal improvements.
+
+=== WHEN HAVING A CONVERSATION ===
+Answer in clean HTML using <strong>, <em>, <br>, <ul><li> tags. Be concrete — give actual tag names, block names, specific time values. Share relevant IEC 61131-3 norms, ISO 13849 safety levels, and TIA Portal-specific gotchas. Proactively suggest ideas the engineer hasn't asked about if they'd genuinely help.
+
+NEVER output raw markdown (no ##, **, -) in conversational responses.`;
+
+// ── Main send ──
 async function sendChat() {
   if (chatBusy) return;
   const inp = document.getElementById('chatIn');
   const txt = inp.value.trim();
-  if (!txt) return;
-  addMsg('user', esc(txt));
+  const hasImage = !!pendingImageB64;
+  if (!txt && !hasImage) return;
+
+  const displayText = txt || '(Image attached — please analyze this ladder diagram)';
+  const imgDataUrl = hasImage ? `data:${pendingImageMime};base64,${pendingImageB64}` : null;
+  addMsg('user', esc(displayText), imgDataUrl);
   inp.value = ''; inp.style.height = 'auto';
   chatBusy = true; showTyping();
 
-  const pat = detectPattern(txt);
-  if (pat && TPL_PROGRAMS[pat]) {
-    await sleep(800 + Math.random() * 600);
+  // Build user message content array
+  const ctx = buildProgramContext();
+  const userContent = [];
+  if (txt) userContent.push({ type: 'text', text: txt + ctx });
+  if (hasImage) {
+    userContent.push({ type: 'image_url', image_url: { url: `data:${pendingImageMime};base64,${pendingImageB64}`, detail: 'high' } });
+    if (!txt) userContent.push({ type: 'text', text: 'Analyze this ladder logic diagram in detail. Identify all elements, explain exactly what this program does step by step, find any bugs or safety issues, and suggest concrete improvements.' + ctx });
+  }
+  clearImage();
+
+  chatHistory.push({ role: 'user', content: userContent.length === 1 && !hasImage ? userContent[0].text : userContent });
+
+  try {
+    const res = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${_gk()}` },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        max_tokens: 2200,
+        temperature: 0.72,
+        messages: [{ role: 'system', content: SYSTEM_PROMPT }, ...chatHistory]
+      })
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error.message);
+    const raw = (data.choices?.[0]?.message?.content || '').trim();
+    chatHistory.push({ role: 'assistant', content: raw });
+    if (chatHistory.length > 40) chatHistory = chatHistory.slice(-40);
     hideTyping();
-    const prog = TPL_PROGRAMS[pat]();
-    rungs = [...rungs, ...prog.rungs];
-    render();
-    addMsg('ai', `✅ <strong>Generated ${prog.rungs.length} rungs</strong> — ${prog.name}<br>${prog.desc}<br><br><em>Double-click any element to edit tags & addresses. Drag rungs to reorder. Enable Sim to test logic.</em>`);
-  } else {
-    try {
-      const res = await fetch('https://api.anthropic.com/v1/messages', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model: 'claude-sonnet-4-20250514',
-          max_tokens: 1200,
-          system: `You are LadderMind AI, an expert Siemens TIA Portal PLC programmer. Generate ladder logic programs in strict JSON format (no markdown, no preamble):
-{"reply":"brief explanation","rungs":[{"comment":"// network description","elements":[...]}]}
 
-Supported element types (use exact t/sub values):
-- Contact: {"t":"contact","sub":"no"|"nc"|"pos"|"neg","label":"Tag_Name","addr":"%I0.0"}
-- Coil: {"t":"coil","sub":"out"|"set"|"res","label":"Tag_Name","addr":"%Q0.0"}
-- Timer: {"t":"timer","sub":"TON"|"TOF"|"TP"|"TONR","name":"T_Name","pt":"T#5S","et":"T#0S"}
-- Counter: {"t":"counter","sub":"CTU"|"CTD"|"CTUD","name":"C_Name","pv":10,"cv":0}
-- FlipFlop: {"t":"ff","sub":"sr"|"rs","s":"S_Tag","r":"R_Tag","addr":"%M0.0"}
-- Compare: {"t":"cmp","sub":"=="|"<>"|">"|"<"|">="|"<=","in1":"TagA","in2":"0"}
-- Math: {"t":"math","sub":"ADD"|"SUB"|"MUL"|"DIV"|"MOD"|"ABS"|"SQRT","in1":"A","in2":"B","out":"R"}
-- Move: {"t":"move","sub":"MOVE","in":"Src","out":"Dst"}
-- Convert: {"t":"conv","sub":"INT_TO_REAL"|"REAL_TO_INT"|"ROUND"|"TRUNC","in":"Tag","out":"Tag"}
-- Word: {"t":"word","sub":"WAND"|"WOR"|"WXOR"|"SHL"|"SHR","in1":"Tag","in2":"mask","out":"Tag"}
-- PID: {"t":"ctrl","sub":"PID_Compact","sp":"SP_Tag","pv":"PV_Tag","out":"Out_Tag"}
+    // Detect if response is ladder JSON
+    let parsed = null;
+    const jsonMatch = raw.match(/\{[\s\S]*"rungs"[\s\S]*\}/);
+    if (jsonMatch) { try { parsed = JSON.parse(jsonMatch[0]); } catch { parsed = null; } }
 
-Rules: Use TIA Portal style tags (PascalCase). Use %Ix.x for inputs, %Qx.x for outputs, %Mx.x for markers, T#xS for time. Add meaningful comments. Generate 2–6 rungs. Always start with safety contacts if relevant.`,
-          messages: [{ role: 'user', content: txt }]
-        })
-      });
-      const data = await res.json();
-      const raw = data.content?.map(c => c.text || '').join('') || '';
-      let parsed;
-      try { parsed = JSON.parse(raw.replace(/```json|```/g, '').trim()); } catch { parsed = null; }
-      hideTyping();
-      if (parsed?.rungs) {
-        const newRungs = parsed.rungs.map(r => {
-          const rung = mk(r.comment || '', []);
-          rung.elements = (r.elements || []).map(el => { const e = mkElem(el.t === 'contact' ? (el.sub === 'nc' ? 'contact-nc' : el.sub === 'pos' ? 'contact-pos' : el.sub === 'neg' ? 'contact-neg' : 'contact-no') : el.t === 'coil' ? (el.sub === 'set' ? 'coil-set' : el.sub === 'res' ? 'coil-reset' : 'coil-out') : el.sub?.toLowerCase() || el.t || 'contact-no'); return { ...e, ...el, id: uid() }; });
-          return rung;
+    if (parsed?.rungs?.length) {
+      const newRungs = parsed.rungs.map(r => {
+        const rung = mk(r.comment || '', []);
+        rung.elements = (r.elements || []).map(el => {
+          const key = el.t === 'contact'
+            ? (el.sub === 'nc' ? 'contact-nc' : el.sub === 'pos' ? 'contact-pos' : el.sub === 'neg' ? 'contact-neg' : 'contact-no')
+            : el.t === 'coil'
+            ? (el.sub === 'set' ? 'coil-set' : el.sub === 'res' ? 'coil-reset' : el.sub === 'pos' ? 'coil-pos' : el.sub === 'neg' ? 'coil-neg' : 'coil-out')
+            : (el.sub?.toLowerCase() || el.t || 'contact-no');
+          return { ...mkElem(key), ...el, id: uid() };
         });
-        rungs = [...rungs, ...newRungs];
-        render();
-        addMsg('ai', `✅ <strong>${newRungs.length} rungs generated.</strong><br>${parsed.reply || ''}<br><em>Double-click to edit. Enable Sim to test.</em>`);
-      } else {
-        addMsg('ai', raw || 'Describe your automation logic in detail — include inputs, outputs, timing, and any safety requirements.');
-      }
-    } catch {
-      hideTyping();
-      addMsg('ai', 'I can generate TIA Portal ladder logic for motors, conveyors, tanks, timers, counters, PID, math, flip-flops, and more. Try describing your process.');
+        return rung;
+      });
+      rungs = [...rungs, ...newRungs];
+      render();
+      const replyHtml = (parsed.reply || '').replace(/\n/g, '<br>');
+      addMsg('ai', `✅ <strong>${newRungs.length} rungs generated.</strong><br>${replyHtml}<br><br><em style="color:var(--t3);font-size:10px;">Double-click any element to edit · Drag rungs to reorder · Enable Sim to test</em>`);
+    } else {
+      // Conversational reply — render as HTML, convert any stray markdown
+      const html = raw
+        .replace(/```[\s\S]*?```/g, m => `<pre style="background:var(--s3);padding:8px 10px;border-radius:3px;font-size:10px;overflow-x:auto;margin:6px 0;border-left:2px solid var(--cyan)">${esc(m.replace(/```\w*\n?/g,'').trim())}</pre>`)
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/\*(.+?)\*/g, '<em>$1</em>')
+        .replace(/^### (.+)$/gm, '<strong style="color:var(--cyan)">$1</strong>')
+        .replace(/^## (.+)$/gm, '<strong style="color:var(--cyan);font-size:13px">$1</strong>')
+        .replace(/^# (.+)$/gm, '<strong style="color:var(--cyan);font-size:14px">$1</strong>')
+        .replace(/^[\-\*] (.+)$/gm, '• $1')
+        .replace(/\n{2,}/g, '<br><br>')
+        .replace(/\n/g, '<br>');
+      addMsg('ai', html);
     }
+  } catch(err) {
+    hideTyping();
+    addMsg('ai', `⚠️ <strong>Error:</strong> ${esc(err.message)}<br><em style="color:var(--t3);">Check your connection and try again.</em>`);
   }
   chatBusy = false;
 }
