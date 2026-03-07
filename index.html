@@ -213,6 +213,7 @@ body::before{content:'';position:fixed;inset:0;
 .par-stack{display:flex;flex-direction:column;flex:1;min-width:0;}
 .par-branch{display:flex;align-items:center;min-height:62px;position:relative;overflow:visible;padding-bottom:10px;}
 .par-branch+.par-branch{border-top:1px solid rgba(0,212,255,.1);}
+.par-pre-drop{display:flex;align-items:center;transition:outline .1s;}
 .par-post-drop{display:flex;align-items:center;transition:outline .1s;}
 /* Per-element ⊕ hover button */
 .elem-wrap{position:relative;display:inline-flex;align-items:center;flex-shrink:0;}
@@ -861,13 +862,14 @@ function mkElem(type, overrides = {}) {
 }
 
 function mkRung(elems = [], comment = '') {
-  return { id: uid(), comment, branches: [elems], post: [], powered: false };
+  return { id: uid(), comment, pre: [], branches: [elems], post: [], powered: false };
 }
 
 // ── Branch helpers ──
-const allBranchElems = r => [...(r.branches || [r.elements||[]]).flat(), ...(r.post||[])];
-function normBranches(r) { if (!r.branches) { r.branches = [r.elements||[]]; delete r.elements; } if (!r.post) r.post = []; return r; }
+const allBranchElems = r => [...(r.pre||[]), ...(r.branches || [r.elements||[]]).flat(), ...(r.post||[])];
+function normBranches(r) { if (!r.branches) { r.branches = [r.elements||[]]; delete r.elements; } if (!r.post) r.post = []; if (!r.pre) r.pre = []; return r; }
 function findInBranches(rung, eid) {
+  if (rung.pre)  { const el = rung.pre.find(e => e.id === eid);  if (el) return { el, section: 'pre',  bi: -1 }; }
   if (rung.post) { const el = rung.post.find(e => e.id === eid); if (el) return { el, section: 'post', bi: -1 }; }
   const br = rung.branches || [rung.elements||[]];
   for (let bi = 0; bi < br.length; bi++) { const el = br[bi].find(e => e.id === eid); if (el) return { el, section: 'branch', bi }; }
@@ -979,8 +981,16 @@ function render() {
 function renderBranches(rung, pw) {
   const id = rung.id;
   const branches = rung.branches;
+  const pre  = rung.pre  || [];
   const post = rung.post || [];
   const multi = branches.length > 1;
+
+  // Pre-section HTML (series elements BEFORE the parallel fork)
+  const preHtml = multi ? `
+    <div class="par-pre-drop" ondragover="tbBranchDragOver(event)" ondragleave="tbBranchDragLeave(event)" ondrop="tbBranchDrop(event,'${id}','pre')" title="Drop here for series elements before the parallel block">
+    ${pre.map(el => renderElem(el, rung)).join('')}
+    <button class="add-el-btn" onclick="event.stopPropagation();openAddMenu('${id}','pre',event)" title="Add series element before fork" style="opacity:.6;font-size:9px;padding:0 5px;">+Pre</button>
+    </div>` : '';
 
   // Shared post-section HTML (elements after the merge point)
   const postHtml = multi ? `
@@ -1020,7 +1030,7 @@ function renderBranches(rung, pw) {
     </div>`;
   }).join('');
 
-  return `<div class="wire" style="width:6px;"></div>
+  return `${preHtml}<div class="wire" style="width:6px;"></div>
     <div class="par-outer">
       <div class="par-vrail ${pw ? 'pw' : ''}"></div>
       <div class="par-stack">${branchRows}</div>
@@ -1212,6 +1222,7 @@ function dupRung() {
   const copy = JSON.parse(JSON.stringify(src));
   normBranches(copy);
   copy.id = uid();
+  copy.pre.forEach(e => { e.id = uid(); e._pw = false; });
   copy.branches.forEach(br => br.forEach(e => { e.id = uid(); e._pw = false; }));
   copy.post.forEach(e => { e.id = uid(); e._pw = false; });
   const i = rungs.findIndex(r => r.id === selRungId);
@@ -1260,7 +1271,9 @@ function insertElem(type, rungId, branchIdx) {
   const r = rungs.find(r => r.id === rungId);
   if (!r) return;
   normBranches(r);
-  if (branchIdx === 'post') {
+  if (branchIdx === 'pre') {
+    r.pre.push(mkElem(type));
+  } else if (branchIdx === 'post') {
     r.post.push(mkElem(type));
   } else {
     const bi = branchIdx ?? 0;
@@ -1275,7 +1288,10 @@ function delElem() {
   const r = rungs.find(r => r.id === selRungId);
   if (!r) return;
   normBranches(r);
-  // Check post section first
+  // Check pre section first
+  const pri = r.pre.findIndex(e => e.id === selElemId);
+  if (pri !== -1) { r.pre.splice(pri, 1); selElemId = null; render(); return; }
+  // Check post section
   const pi = r.post.findIndex(e => e.id === selElemId);
   if (pi !== -1) { r.post.splice(pi, 1); selElemId = null; render(); return; }
   for (let bi = 0; bi < r.branches.length; bi++) {
@@ -1366,6 +1382,8 @@ function delElemFromPop(eid, rid) {
   const r = rungs.find(r => r.id === rid);
   if (!r) return;
   normBranches(r);
+  const pri = r.pre.findIndex(e => e.id === eid);
+  if (pri !== -1) { r.pre.splice(pri, 1); selElemId = null; render(); return; }
   const pi = r.post.findIndex(e => e.id === eid);
   if (pi !== -1) { r.post.splice(pi, 1); selElemId = null; render(); return; }
   for (let bi = 0; bi < r.branches.length; bi++) {
@@ -1478,10 +1496,30 @@ function evalLogic() {
   const tags = { ...simInputs };
   rungs.forEach(rung => {
     normBranches(rung);
-    // Evaluate each branch independently (parallel = OR logic)
+
+    // ── PRE: series elements before the parallel fork ──
+    let prePwr = true;
+    (rung.pre || []).forEach(el => {
+      if (el.t === 'contact') {
+        const state = !!tags[el.label];
+        const pass = el.sub === 'nc' ? !state : state;
+        el._pw = prePwr && pass; prePwr = prePwr && pass;
+      } else if (el.t === 'coil') {
+        el._pw = prePwr;
+        if (prePwr) {
+          if (el.sub === 'out') tags[el.label] = true;
+          else if (el.sub === 'set') tags[el.label] = true;
+          else if (el.sub === 'res') tags[el.label] = false;
+        }
+      } else if (el.t === 'special' && el.sub === 'not') {
+        el._pw = prePwr; prePwr = !prePwr;
+      } else { el._pw = prePwr; }
+    });
+
+    // ── BRANCHES: each branch starts with pre's output power (AND then OR) ──
     let rungPwr = false;
     rung.branches.forEach(branch => {
-      let pwr = true;
+      let pwr = prePwr;
       branch.forEach(el => {
         if (el.t === 'contact') {
           const state = !!tags[el.label];
@@ -1509,7 +1547,8 @@ function evalLogic() {
       });
       if (pwr) rungPwr = true; // OR: any branch powered = rung powered
     });
-    // Post elements run on the OR result of all branches
+
+    // ── POST: shared outputs after the merge point ──
     let postPwr = rungPwr;
     rung.post.forEach(el => {
       if (el.t === 'contact') {
