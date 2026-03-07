@@ -2071,7 +2071,8 @@ function buildSimView() {
   const grid = document.getElementById('simGrid');
   const contactHtml = Object.entries(contacts).map(([lbl, addr]) => {
     const on = !!simInputs[lbl];
-    return `<div class="stag ${on ? 'on' : ''}" onclick="toggleSimTag('${lbl}')">
+    const sid = 'sc_' + lbl.replace(/[^a-zA-Z0-9_]/g, '_');
+    return `<div class="stag ${on ? 'on' : ''}" id="${sid}" onclick="toggleSimTag('${lbl}')">
       <div class="stag-name">${esc(lbl)}</div>
       <div class="stag-addr">${esc(addr)}</div>
       <div class="stag-state">
@@ -2122,6 +2123,23 @@ function buildSimView() {
 }
 
 function refreshSimStatus() {
+  // Refresh contact cards live
+  const contacts = {};
+  rungs.forEach(r => allBranchElems(r).forEach(el => {
+    if (el.t === 'contact') contacts[el.label] = true;
+  }));
+  Object.keys(contacts).forEach(lbl => {
+    const sid = 'sc_' + lbl.replace(/[^a-zA-Z0-9_]/g, '_');
+    const card = document.getElementById(sid);
+    if (!card) return;
+    const on = !!simInputs[lbl];
+    card.className = 'stag' + (on ? ' on' : '');
+    const led = card.querySelector('.stag-led');
+    const val = card.querySelector('.stag-val');
+    if (led) { led.style.background = on ? 'var(--green)' : 'var(--t3)'; led.style.boxShadow = on ? '0 0 8px var(--green)' : ''; }
+    if (val) { val.textContent = on ? 'TRUE' : 'FALSE'; val.style.color = on ? 'var(--green)' : 'var(--t3)'; }
+  });
+
   // Lightweight update of timer/counter cards without full rebuild
   rungs.forEach(r => allBranchElems(r).forEach(el => {
     if (el.t === 'timer') {
