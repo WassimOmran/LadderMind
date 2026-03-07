@@ -210,7 +210,7 @@ body::before{content:'';position:fixed;inset:0;
 .par-outer{display:flex;align-items:stretch;flex:1;min-width:0;}
 .par-inline{flex:0 0 auto!important;display:inline-flex!important;vertical-align:middle;flex-shrink:0;overflow:visible;}
 .par-inline .par-stack{flex:0 0 auto;align-items:flex-start;}
-.par-inline .par-branch{min-height:0;min-width:max-content;padding-bottom:14px;}
+.par-inline .par-branch{min-height:0;min-width:max-content;padding-bottom:14px;padding-right:4px;}
 .par-inline .par-branch .add-el-btn{margin-right:6px;flex-shrink:0;}
 .par-vrail{width:3px;background:var(--cyan);box-shadow:0 0 6px rgba(0,212,255,.25);flex-shrink:0;border-radius:1px;transition:background .25s,box-shadow .25s;}
 .par-vrail.pw{background:var(--green);box-shadow:0 0 10px rgba(0,255,136,.4);}
@@ -1048,8 +1048,7 @@ function renderGroup(group, rung, pw) {
       ${bi > 0 ? `<span class="branch-label">B${bi+1}</span>` : ''}
       <div class="wire" style="width:4px;"></div>
       ${branch.map(c => renderCell(c, rung, pw)).join('')}
-      <div class="wire ${bpw ? 'pw' : ''}" style="width:4px;"></div>
-      <button class="add-el-btn" onclick="event.stopPropagation();openAddMenuInGroup('${rid}','${gid}',${bi},event)" title="Add element">+</button>
+      <button class="add-el-btn" onclick="event.stopPropagation();openAddMenuInGroup('${rid}','${gid}',${bi},event)" title="Add element" style="margin-left:4px;margin-right:8px;">+</button>
       ${delBtn}
     </div>`;
   }).join('');
