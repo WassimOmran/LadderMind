@@ -114,7 +114,7 @@ body::before{content:'';position:fixed;inset:0;
 .rung-body{flex:1;background:var(--s2);border-top:1px solid var(--b1);border-bottom:1px solid var(--b1);display:flex;flex-direction:column;position:relative;overflow:visible;}
 .rung-comment{padding:2px 10px;font-family:var(--mono);font-size:9px;color:var(--t3);font-style:italic;border-bottom:1px dashed rgba(255,255,255,.04);min-height:16px;cursor:text;outline:none;}
 .rung-comment:empty::before{content:'// comment...';opacity:.3;}
-.rung-elems{display:flex;align-items:center;padding:0 3px 26px 3px;min-height:70px;overflow-x:auto;overflow-y:hidden;gap:0;}
+.rung-elems{display:flex;align-items:center;padding:0 3px 28px 3px;min-height:90px;overflow-x:auto;overflow-y:hidden;gap:0;}
 .rung-elems::-webkit-scrollbar{height:2px;}
 .rung-elems::-webkit-scrollbar-thumb{background:var(--b2);}
 .del-rung{position:absolute;right:5px;top:5px;width:18px;height:18px;background:transparent;border:1px solid transparent;border-radius:2px;color:var(--t3);cursor:pointer;font-size:13px;opacity:0;display:flex;align-items:center;justify-content:center;transition:all .12s;}
@@ -786,7 +786,7 @@ const TB_GROUPS = [
 // ═══════════════════════════════════════════════════
 let rungs = [];
 let selRungId = null, selElemId = null;
-let simActive = false, simInputs = {};
+let simActive = false, simInputs = {}, simTimers = {}, simCounters = {}, simEdge = {};
 let dragSrcId = null, tbDragType = null;
 let _id = 1;
 const uid = () => 'e' + (_id++);
@@ -1637,6 +1637,8 @@ function toggleSim() {
     simLoop();
   } else {
     rungs.forEach(r => { r.powered = false; allBranchElems(r).forEach(e => e._pw = false); });
+    simTimers = {}; simCounters = {}; simEdge = {};
+    Object.keys(simInputs).forEach(k => { if (/\.(Q|ET|CV|DN|QU|QD)$/.test(k)) delete simInputs[k]; });
     render();
   }
 }
@@ -1644,40 +1646,213 @@ function toggleSim() {
 function simLoop() {
   if (!simActive) return;
   evalLogic(); render();
+  if (currentTab === 'simulator') refreshSimStatus();
   setTimeout(simLoop, 280);
 }
 
+// Parse IEC time literal → milliseconds  e.g. "T#1S500MS", "T#200MS", "T#5S"
+function parsePT(pt) {
+  if (!pt) return 1000;
+  const s = String(pt).toUpperCase().replace(/T[#_]/,'');
+  let ms = 0;
+  const h = s.match(/(\d+)H/);   if (h)  ms += parseInt(h[1])  * 3600000;
+  const m = s.match(/(\d+)M(?!S)/); if (m) ms += parseInt(m[1]) * 60000;
+  const sec = s.match(/(\d+)S(?!T)/); if (sec) ms += parseInt(sec[1]) * 1000;
+  const msec = s.match(/(\d+)MS/); if (msec) ms += parseInt(msec[1]);
+  return ms || 1000;
+}
+
+const SIM_TICK = 280; // ms per sim loop cycle
+
+// Resolve a tag name or numeric literal from the tag table
+function tagVal(key, tags) {
+  if (key === undefined || key === '') return 0;
+  const n = parseFloat(key);
+  if (!isNaN(n) && String(key).trim() !== '') return n;
+  return parseFloat(tags[key]) || (tags[key] ? 1 : 0);
+}
+
 // Recursively evaluates a cell array in series; returns final power level.
-// Inline _group nodes evaluate as OR across their sub-branches.
 function evalCellsArr(cells, pwr, tags) {
   let p = pwr;
   (cells||[]).forEach(el => {
+
+    // ── Inline parallel group ──
     if (el._group) {
       let gPwr = false;
       el.branches.forEach(sub => { if (evalCellsArr(sub, p, tags)) gPwr = true; });
       el._pw = gPwr; p = gPwr;
       return;
     }
+
+    // ── Contact ──
     if (el.t === 'contact') {
       const state = !!tags[el.label];
-      const pass = el.sub === 'nc' ? !state : state;
+      const prev  = !!simEdge['c_' + el.id];
+      let pass;
+      if      (el.sub === 'nc')  pass = !state;
+      else if (el.sub === 'pos') pass = state && !prev;   // rising edge
+      else if (el.sub === 'neg') pass = !state && prev;   // falling edge
+      else                       pass = state;             // no
+      simEdge['c_' + el.id] = state;
       el._pw = p && pass; p = p && pass;
+
+    // ── Coil ──
     } else if (el.t === 'coil') {
       el._pw = p;
-      if (p) {
-        if (el.sub === 'out') tags[el.label] = true;
-        else if (el.sub === 'set') tags[el.label] = true;
-        else if (el.sub === 'res') tags[el.label] = false;
+      const prev = !!simEdge['coil_' + el.id];
+      const rising  = p && !prev;
+      const falling = !p && prev;
+      simEdge['coil_' + el.id] = p;
+      if      (el.sub === 'out') tags[el.label] = p;             // follows rung power
+      else if (el.sub === 'set' && p) tags[el.label] = true;     // latching set
+      else if (el.sub === 'res' && p) tags[el.label] = false;    // latching reset
+      else if (el.sub === 'pos' && rising)  tags[el.label] = true;  // 1-scan pulse on rising
+      else if (el.sub === 'neg' && falling) tags[el.label] = true;  // 1-scan pulse on falling
+      // pos/neg coil auto-clears next scan (no continuous power → label = false next cycle)
+      if ((el.sub === 'pos' || el.sub === 'neg') && !rising && !falling) tags[el.label] = false;
+
+    // ── Timer ──
+    } else if (el.t === 'timer') {
+      if (!simTimers[el.id]) simTimers[el.id] = { et: 0, q: false, prevEn: false };
+      const st = simTimers[el.id];
+      const pt = parsePT(el.pt);
+      const en = p;
+      el._pw = p;
+
+      if (el.sub === 'TON') {
+        if (en) { if (!st.q) { st.et = Math.min(st.et + SIM_TICK, pt); if (st.et >= pt) st.q = true; } }
+        else    { st.et = 0; st.q = false; }
+      } else if (el.sub === 'TOF') {
+        if (en)  { st.q = true; st.et = 0; }
+        else if (st.q) { st.et = Math.min(st.et + SIM_TICK, pt); if (st.et >= pt) { st.q = false; st.et = 0; } }
+      } else if (el.sub === 'TP') {
+        if (en && !st.prevEn && !st.q) { st.q = true; st.et = 0; } // rising edge only
+        if (st.q) { st.et = Math.min(st.et + SIM_TICK, pt); if (st.et >= pt) { st.q = false; st.et = pt; } }
+      } else if (el.sub === 'TONR') {
+        if (en && !st.q) { st.et = Math.min(st.et + SIM_TICK, pt); if (st.et >= pt) st.q = true; }
+        if (tags[el.name + '.R']) { st.et = 0; st.q = false; }
       }
+
+      st.prevEn = en;
+      tags[el.name + '.Q']  = st.q;
+      tags[el.name + '.ET'] = st.et;
+      tags[el.name + '.DN'] = st.q;
+
+    // ── Counter ──
+    } else if (el.t === 'counter') {
+      if (!simCounters[el.id]) simCounters[el.id] = { cv: 0, q: false, prevCU: false, prevCD: false };
+      const st = simCounters[el.id];
+      const pv = parseInt(el.pv) || 0;
+      el._pw = p;
+      if (el.sub === 'CTU') {
+        if (p && !st.prevCU) st.cv++;
+        if (tags[el.name + '.R']) st.cv = 0;
+        st.prevCU = p;
+      } else if (el.sub === 'CTD') {
+        if (p && !st.prevCD) st.cv = Math.max(0, st.cv - 1);
+        if (tags[el.name + '.LD']) st.cv = pv;
+        st.prevCD = p;
+      } else if (el.sub === 'CTUD') {
+        if (p && !st.prevCU) st.cv++;
+        if (p && !st.prevCD) st.cv = Math.max(0, st.cv - 1);
+        if (tags[el.name + '.R']) st.cv = 0;
+        st.prevCU = st.prevCD = p;
+      }
+      st.q = el.sub === 'CTD' ? st.cv <= 0 : st.cv >= pv;
+      tags[el.name + '.Q']  = st.q;
+      tags[el.name + '.CV'] = st.cv;
+      tags[el.name + '.QU'] = st.cv >= pv;
+      tags[el.name + '.QD'] = st.cv <= 0;
+
+    // ── Flip-flop SR/RS ──
     } else if (el.t === 'ff') {
       const s = !!tags[el.s], r2 = !!tags[el.r];
       el._pw = p;
       if (p) {
-        if (el.sub === 'sr') { if (s) tags[el.addr] = true; if (r2 && !s) tags[el.addr] = false; }
-        else { if (r2) tags[el.addr] = false; if (s && !r2) tags[el.addr] = true; }
+        if (el.sub === 'sr') { if (r2) tags[el.addr] = false; if (s) tags[el.addr] = true; }  // SR: Set dominant
+        else                 { if (s) tags[el.addr] = true; if (r2) tags[el.addr] = false; }  // RS: Reset dominant
       }
+
+    // ── Comparator ──
+    } else if (el.t === 'cmp') {
+      let pass = false;
+      if (el.sub === 'IN_RANGE') {
+        const mn = tagVal(el.min,tags), val = tagVal(el.val,tags), mx = tagVal(el.max,tags);
+        pass = val >= mn && val <= mx;
+      } else {
+        const a = tagVal(el.in1,tags), b = tagVal(el.in2,tags);
+        if      (el.sub === '==')  pass = a === b;
+        else if (el.sub === '<>')  pass = a !== b;
+        else if (el.sub === '>')   pass = a > b;
+        else if (el.sub === '<')   pass = a < b;
+        else if (el.sub === '>=')  pass = a >= b;
+        else if (el.sub === '<=')  pass = a <= b;
+      }
+      el._pw = p && pass; p = p && pass;
+
+    // ── Math ──
+    } else if (el.t === 'math') {
+      el._pw = p;
+      if (p) {
+        const a = tagVal(el.in1,tags), b = tagVal(el.in2,tags);
+        let res;
+        if      (el.sub === 'ADD')   res = a + b;
+        else if (el.sub === 'SUB')   res = a - b;
+        else if (el.sub === 'MUL')   res = a * b;
+        else if (el.sub === 'DIV')   res = b !== 0 ? a / b : 0;
+        else if (el.sub === 'MOD')   res = b !== 0 ? a % b : 0;
+        else if (el.sub === 'MIN')   res = Math.min(a, b);
+        else if (el.sub === 'MAX')   res = Math.max(a, b);
+        else if (el.sub === 'ABS')   res = Math.abs(tagVal(el.in1||el.in,tags));
+        else if (el.sub === 'SQRT')  res = Math.sqrt(Math.max(0,tagVal(el.in1||el.in,tags)));
+        else if (el.sub === 'LIMIT') {
+          const mn=tagVal(el.min,tags), v=tagVal(el.in||el.in1,tags), mx=tagVal(el.max,tags);
+          res = Math.min(mx, Math.max(mn, v));
+        }
+        if (res !== undefined && el.out) { tags[el.out] = res; simInputs[el.out] = res; }
+      }
+
+    // ── Move / Fill ──
+    } else if (el.t === 'move') {
+      el._pw = p;
+      if (p && el.out) { const v = tagVal(el.in,tags); tags[el.out] = v; simInputs[el.out] = v; }
+
+    // ── Conversion ──
+    } else if (el.t === 'conv') {
+      el._pw = p;
+      if (p && el.out) {
+        let v = tagVal(el.in,tags);
+        if      (el.sub === 'INT_TO_REAL')  v = parseFloat(v);
+        else if (el.sub === 'REAL_TO_INT')  v = Math.trunc(v);
+        else if (el.sub === 'INT_TO_DINT')  v = Math.trunc(v);
+        else if (el.sub === 'ROUND')        v = Math.round(v);
+        else if (el.sub === 'TRUNC')        v = Math.trunc(v);
+        tags[el.out] = v; simInputs[el.out] = v;
+      }
+
+    // ── Word logic / Shift ──
+    } else if (el.t === 'word') {
+      el._pw = p;
+      if (p && el.out) {
+        const a = Math.trunc(tagVal(el.in1||el.in,tags)), b = Math.trunc(tagVal(el.in2,tags)), n = parseInt(el.n)||1;
+        let res;
+        if      (el.sub === 'WAND') res = a & b;
+        else if (el.sub === 'WOR')  res = a | b;
+        else if (el.sub === 'WXOR') res = a ^ b;
+        else if (el.sub === 'WINV') res = ~a;
+        else if (el.sub === 'SHL')  res = (a << n) >>> 0;
+        else if (el.sub === 'SHR')  res = a >>> n;
+        else if (el.sub === 'ROL')  res = ((a << n) | (a >>> (32-n))) >>> 0;
+        else if (el.sub === 'ROR')  res = ((a >>> n) | (a << (32-n))) >>> 0;
+        if (res !== undefined) { tags[el.out] = res; simInputs[el.out] = res; }
+      }
+
+    // ── NOT / invert ──
     } else if (el.t === 'special' && el.sub === 'not') {
       el._pw = p; p = !p;
+
+    // ── Anything else — pass power through ──
     } else {
       el._pw = p;
     }
@@ -1695,7 +1870,26 @@ function evalLogic() {
     evalCellsArr(rung.post, rungPwr, tags);
     rung.powered = rungPwr;
   });
+  // Write timer/counter outputs back into simInputs so contacts
+  // in subsequent rungs (or next cycle) can reference TimerName.Q etc.
+  rungs.forEach(rung => allBranchElems(rung).forEach(el => {
+    if (el.t === 'timer') {
+      const st = simTimers[el.id];
+      if (st) { simInputs[el.name+'.Q'] = st.q; simInputs[el.name+'.DN'] = st.q; simInputs[el.name+'.ET'] = st.et; }
+    }
+    if (el.t === 'counter') {
+      const st = simCounters[el.id];
+      if (st) {
+        const pv = parseInt(el.pv)||0;
+        simInputs[el.name+'.Q']  = st.q;
+        simInputs[el.name+'.CV'] = st.cv;
+        simInputs[el.name+'.QU'] = st.cv >= pv;
+        simInputs[el.name+'.QD'] = st.cv <= 0;
+      }
+    }
+  }));
 }
+
 
 // ═══════════════════════════════════════════════════
 //  TAB VIEWS
@@ -1719,30 +1913,95 @@ function switchTab(tab) {
 
 // ── Simulator View ──
 function buildSimView() {
-  const tags = {};
+  const contacts = {}, timers = [], counters = [];
   rungs.forEach(r => allBranchElems(r).forEach(el => {
-    if (el.t === 'contact') tags[el.label] = el.addr || '';
+    if (el.t === 'contact') contacts[el.label] = el.addr || '';
+    if (el.t === 'timer')   timers.push(el);
+    if (el.t === 'counter') counters.push(el);
   }));
   const grid = document.getElementById('simGrid');
-  if (!Object.keys(tags).length) {
-    grid.innerHTML = '<div style="color:var(--t3);font-size:13px;grid-column:1/-1;">No contacts found — generate logic first.</div>';
+  const contactHtml = Object.entries(contacts).map(([lbl, addr]) => {
+    const on = !!simInputs[lbl];
+    return `<div class="stag ${on ? 'on' : ''}" onclick="toggleSimTag('${lbl}')">
+      <div class="stag-name">${esc(lbl)}</div>
+      <div class="stag-addr">${esc(addr)}</div>
+      <div class="stag-state">
+        <div class="stag-led" style="background:${on ? 'var(--green)' : 'var(--t3)'};${on ? 'box-shadow:0 0 8px var(--green);' : ''}"></div>
+        <span class="stag-val" style="color:${on ? 'var(--green)' : 'var(--t3)'};">${on ? 'TRUE' : 'FALSE'}</span>
+        <span style="font-size:9px;color:var(--t3);margin-left:auto;">click</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  const timerHtml = timers.map(el => {
+    const st = simTimers[el.id] || { et: 0, q: false };
+    const pt = parsePT(el.pt);
+    const pct = Math.min(100, Math.round((st.et / pt) * 100));
+    return `<div class="stag ${st.q ? 'on' : ''}" id="simtimer_${el.id}">
+      <div class="stag-name">${esc(el.name)} <span style="font-size:9px;color:var(--t3);">${el.sub}</span></div>
+      <div class="stag-addr">${esc(el.pt)}</div>
+      <div class="stag-state">
+        <div class="stag-led" style="background:${st.q ? 'var(--green)' : 'var(--t3)'};${st.q ? 'box-shadow:0 0 8px var(--green);' : ''}"></div>
+        <span class="stag-val" style="color:${st.q ? 'var(--green)' : 'var(--cyan)'};">${st.q ? 'DONE' : 'TIMING'}</span>
+        <span style="font-size:9px;color:var(--cyan);margin-left:auto;">${st.et}ms / ${pt}ms</span>
+      </div>
+      <div style="height:3px;background:var(--s3);border-radius:2px;margin-top:4px;"><div style="height:3px;background:${st.q ? 'var(--green)' : 'var(--cyan)'};width:${pct}%;border-radius:2px;transition:width .25s;"></div></div>
+    </div>`;
+  }).join('');
+
+  const counterHtml = counters.map(el => {
+    const st = simCounters[el.id] || { cv: 0, q: false };
+    return `<div class="stag ${st.q ? 'on' : ''}" id="simctr_${el.id}">
+      <div class="stag-name">${esc(el.name)} <span style="font-size:9px;color:var(--t3);">${el.sub}</span></div>
+      <div class="stag-addr">PV = ${el.pv}</div>
+      <div class="stag-state">
+        <div class="stag-led" style="background:${st.q ? 'var(--green)' : 'var(--t3)'};${st.q ? 'box-shadow:0 0 8px var(--green);' : ''}"></div>
+        <span class="stag-val" style="color:${st.q ? 'var(--green)' : 'var(--t3)'};">${st.q ? 'DONE' : 'COUNT'}</span>
+        <span style="font-size:9px;color:var(--cyan);margin-left:auto;">CV = ${st.cv}</span>
+      </div>
+    </div>`;
+  }).join('');
+
+  if (!contactHtml && !timerHtml && !counterHtml) {
+    grid.innerHTML = '<div style="color:var(--t3);font-size:13px;grid-column:1/-1;">No elements found — generate logic first.</div>';
   } else {
-    grid.innerHTML = Object.entries(tags).map(([lbl, addr]) => {
-      const on = !!simInputs[lbl];
-      return `<div class="stag ${on ? 'on' : ''}" onclick="toggleSimTag('${lbl}')">
-        <div class="stag-name">${esc(lbl)}</div>
-        <div class="stag-addr">${esc(addr)}</div>
-        <div class="stag-state">
-          <div class="stag-led" style="background:${on ? 'var(--green)' : 'var(--t3)'};${on ? 'box-shadow:0 0 8px var(--green);' : ''}"></div>
-          <span class="stag-val" style="color:${on ? 'var(--green)' : 'var(--t3)'};">${on ? 'TRUE' : 'FALSE'}</span>
-          <span style="font-size:9px;color:var(--t3);margin-left:auto;">click</span>
-        </div>
-      </div>`;
-    }).join('');
+    grid.innerHTML = contactHtml + timerHtml + counterHtml;
   }
+
   evalLogic();
+  refreshSimStatus();
+}
+
+function refreshSimStatus() {
+  // Lightweight update of timer/counter cards without full rebuild
+  rungs.forEach(r => allBranchElems(r).forEach(el => {
+    if (el.t === 'timer') {
+      const card = document.getElementById('simtimer_' + el.id);
+      if (!card) return;
+      const st = simTimers[el.id] || { et: 0, q: false };
+      const pt = parsePT(el.pt);
+      const pct = Math.min(100, Math.round((st.et / pt) * 100));
+      card.className = 'stag' + (st.q ? ' on' : '');
+      card.querySelector('.stag-val').textContent = st.q ? 'DONE' : 'TIMING';
+      card.querySelector('.stag-val').style.color = st.q ? 'var(--green)' : 'var(--cyan)';
+      const spans = card.querySelectorAll('.stag-state span');
+      if (spans[1]) spans[1].textContent = `${st.et}ms / ${pt}ms`;
+      const bar = card.querySelector('div[style*="height:3px;background:var"]');
+      if (bar) { bar.style.width = pct + '%'; bar.style.background = st.q ? 'var(--green)' : 'var(--cyan)'; }
+    }
+    if (el.t === 'counter') {
+      const card = document.getElementById('simctr_' + el.id);
+      if (!card) return;
+      const st = simCounters[el.id] || { cv: 0, q: false };
+      card.className = 'stag' + (st.q ? ' on' : '');
+      card.querySelector('.stag-val').textContent = st.q ? 'DONE' : 'COUNT';
+      const spans = card.querySelectorAll('.stag-state span');
+      if (spans[1]) spans[1].textContent = `CV = ${st.cv}`;
+    }
+  }));
+
   const list = document.getElementById('rungStatusList');
-  if (!rungs.length) { list.innerHTML = '<div style="padding:16px;color:var(--t3);font-size:12px;">No rungs.</div>'; return; }
+  if (!list || !rungs.length) return;
   list.innerHTML = rungs.map((r, i) => `
     <div class="rung-status-row ${r.powered && simActive ? 'pw' : ''}">
       <span class="rs-num">${String(i).padStart(3,'0')}</span>
@@ -1755,7 +2014,7 @@ function buildSimView() {
 function toggleSimTag(lbl) {
   simInputs[lbl] = !simInputs[lbl];
   if (!simActive) toggleSim();
-  else { evalLogic(); }
+  else { evalLogic(); render(); }
   buildSimView();
 }
 
