@@ -1050,6 +1050,21 @@ function addBranch(rungId) {
   render();
 }
 
+// Called by the per-element ⊕ button — adds a new branch then immediately
+// opens the element picker scoped to that new branch row.
+function addBranchAndOpen(rungId, evt) {
+  evt.stopPropagation();
+  rungId = rungId || selRungId || (rungs[0] && rungs[0].id);
+  const r = rungs.find(r => r.id === rungId);
+  if (!r) return;
+  normBranches(r);
+  r.branches.push([]);
+  selRungId = rungId;
+  render();
+  const newBi = r.branches.length - 1;
+  openAddMenu(rungId, newBi, evt);
+}
+
 function delBranch(rungId, bi) {
   const r = rungs.find(r => r.id === rungId);
   if (!r || !r.branches || r.branches.length <= 1) return;
@@ -1186,7 +1201,7 @@ function renderElem(el, rung) {
   return `${wir}<div class="elem-wrap"><div class="${cls}" data-id="${el.id}" data-rid="${rung.id}"
     onclick="event.stopPropagation();selElem('${el.id}','${rung.id}')"
     ondblclick="event.stopPropagation();openEditPop('${el.id}','${rung.id}',event)"
-    title="Dbl-click to edit">${inner}</div><button class="elem-par-btn" onclick="event.stopPropagation();addBranch('${rung.id}')" title="Add parallel branch here">⊕</button></div>`;
+    title="Dbl-click to edit">${inner}</div><button class="elem-par-btn" onclick="addBranchAndOpen('${rung.id}',event)" title="Add parallel branch here">⊕</button></div>`;
 }
 
 function updStats() {
