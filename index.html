@@ -224,6 +224,10 @@ body::before{content:'';position:fixed;inset:0;
 .elem-par-btn{position:absolute;bottom:-13px;left:50%;transform:translateX(-50%);width:18px;height:18px;border-radius:50%;background:var(--s2);border:1px solid rgba(0,255,136,.45);color:var(--green);font-size:12px;line-height:1;cursor:pointer;display:none;align-items:center;justify-content:center;z-index:10;padding:0;transition:all .12s;box-shadow:0 2px 6px rgba(0,0,0,.4);}
 .elem-wrap:hover .elem-par-btn{display:flex;}
 .elem-par-btn:hover{background:rgba(0,255,136,.18);border-color:var(--green);box-shadow:0 0 8px rgba(0,255,136,.35);}
+.elem-wrap.el-dragging{opacity:.3;outline:1px dashed var(--cyan);border-radius:3px;}
+.elem-wrap.el-drop-before::before{content:'';position:absolute;left:-3px;top:0;bottom:0;width:3px;background:var(--cyan);border-radius:2px;z-index:20;pointer-events:none;}
+.elem-wrap.el-drop-after::after{content:'';position:absolute;right:-3px;top:0;bottom:0;width:3px;background:var(--cyan);border-radius:2px;z-index:20;pointer-events:none;}
+.elem-wrap[draggable]{cursor:grab;}.elem-wrap[draggable]:active{cursor:grabbing;}
 .add-branch-btn{padding:3px 10px;font-family:var(--mono);font-size:9px;font-weight:700;background:rgba(0,255,136,.06);border:1px solid rgba(0,255,136,.3);color:var(--green);border-radius:2px;cursor:pointer;white-space:nowrap;flex-shrink:0;margin:0 6px;transition:all .12s;letter-spacing:.5px;}
 .add-branch-btn:hover{background:rgba(0,255,136,.14);border-color:var(--green);box-shadow:0 0 8px rgba(0,255,136,.2);}
 .del-branch-btn{width:16px;height:16px;border-radius:50%;border:1px solid transparent;background:transparent;color:var(--t3);cursor:pointer;font-size:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .12s;opacity:0;margin-right:2px;}
@@ -789,6 +793,7 @@ let rungs = [];
 let selRungId = null, selElemId = null;
 let simActive = false, simInputs = {}, simTimers = {}, simCounters = {}, simEdge = {};
 let dragSrcId = null, tbDragType = null;
+let elDragId = null, elDragRungId = null;
 let _id = 1;
 const uid = () => 'e' + (_id++);
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -1213,9 +1218,24 @@ function insertElemInGroup(type, rungId, gid, bi) {
 }
 
 function tbGroupBranchDrop(e, rungId, gid, bi) {
+  e.currentTarget.style.outline = '';
+  if (elDragId) {
+    e.preventDefault(); e.stopPropagation();
+    const srcRung = rungs.find(r => r.id === elDragRungId);
+    const dstRung = rungs.find(r => r.id === rungId);
+    if (!srcRung || !dstRung) return;
+    normBranches(srcRung); normBranches(dstRung);
+    const srcRef = findInBranches(srcRung, elDragId);
+    if (!srcRef) return;
+    const el = JSON.parse(JSON.stringify(srcRef.el));
+    removeFromCells(srcRef._ref.arr, elDragId);
+    const group = findGroupInRung(dstRung, gid);
+    if (group) { if (!group.branches[bi]) group.branches[bi] = []; group.branches[bi].push(el); }
+    elDragId = null; elDragRungId = null;
+    render(); return;
+  }
   if (!tbDragType) return;
   e.preventDefault(); e.stopPropagation();
-  e.currentTarget.style.outline = '';
   insertElemInGroup(tbDragType, rungId, gid, bi);
   tbDragType = null;
 }
@@ -1353,10 +1373,16 @@ function renderElem(el, rung) {
     inner = `<div class="elem-lbl">${esc(el.sub||el.t)}</div>`;
   }
 
-  return `${wir}<div class="elem-wrap"><div class="${cls}" data-id="${el.id}" data-rid="${rung.id}"
-    onclick="event.stopPropagation();selElem('${el.id}','${rung.id}')"
-    ondblclick="event.stopPropagation();openEditPop('${el.id}','${rung.id}',event)"
-    title="Dbl-click to edit">${inner}</div><button class="elem-par-btn" onclick="wrapElemInGroup('${rung.id}','${el.id}',event)" title="Add parallel branch for this element only">⊕</button></div>`;
+  return `${wir}<div class="elem-wrap" draggable="true"
+    ondragstart="elDragStart(event,'${rung.id}','${el.id}')"
+    ondragend="elDragEnd(event)"
+    ondragover="elDragOverElem(event,'${rung.id}','${el.id}')"
+    ondragleave="elDragLeaveElem(event)"
+    ondrop="elDropOnElem(event,'${rung.id}','${el.id}')">
+    <div class="${cls}" data-id="${el.id}" data-rid="${rung.id}"
+      onclick="event.stopPropagation();selElem('${el.id}','${rung.id}')"
+      ondblclick="event.stopPropagation();openEditPop('${el.id}','${rung.id}',event)"
+      title="Dbl-click to edit">${inner}</div><button class="elem-par-btn" onclick="wrapElemInGroup('${rung.id}','${el.id}',event)" title="Add parallel branch for this element only">⊕</button></div>`;
 }
 
 function updStats() {
@@ -1555,7 +1581,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') { closeEditP
 //  DRAG & DROP — Toolbox onto branches
 // ═══════════════════════════════════════════════════
 function tbBranchDragOver(e) {
-  if (!tbDragType) return;
+  if (!tbDragType && !elDragId) return;
   e.preventDefault();
   e.stopPropagation();
   e.dataTransfer.dropEffect = 'copy';
@@ -1566,12 +1592,82 @@ function tbBranchDragLeave(e) {
   e.currentTarget.style.outline = '';
 }
 function tbBranchDrop(e, rungId, bi) {
+  e.currentTarget.style.outline = '';
+  if (elDragId) { e.preventDefault(); e.stopPropagation(); elDropAppend(rungId, bi === 'pre' ? 'pre' : bi === 'post' ? 'post' : 'branch', typeof bi === 'number' ? bi : 0); return; }
   if (!tbDragType) return;
   e.preventDefault();
   e.stopPropagation();
-  e.currentTarget.style.outline = '';
   insertElem(tbDragType, rungId, bi);
   tbDragType = null;
+}
+
+// ═══════════════════════════════════════════════════
+//  DRAG & DROP — Element reorder within/across branches
+// ═══════════════════════════════════════════════════
+function elDragStart(e, rungId, elemId) {
+  e.stopPropagation(); // don't trigger rung reorder
+  elDragId = elemId; elDragRungId = rungId; tbDragType = null;
+  e.dataTransfer.effectAllowed = 'move';
+  e.currentTarget.classList.add('el-dragging');
+}
+function elDragEnd(e) {
+  document.querySelectorAll('.el-dragging,.el-drop-before,.el-drop-after')
+    .forEach(d => d.classList.remove('el-dragging','el-drop-before','el-drop-after'));
+  elDragId = null; elDragRungId = null;
+}
+function elDragOverElem(e, rungId, elemId) {
+  if (!elDragId || elDragId === elemId) return;
+  e.preventDefault(); e.stopPropagation();
+  e.dataTransfer.dropEffect = 'move';
+  const rect = e.currentTarget.getBoundingClientRect();
+  const before = e.clientX < rect.left + rect.width / 2;
+  document.querySelectorAll('.el-drop-before,.el-drop-after')
+    .forEach(d => d.classList.remove('el-drop-before','el-drop-after'));
+  e.currentTarget.classList.toggle('el-drop-before', before);
+  e.currentTarget.classList.toggle('el-drop-after', !before);
+}
+function elDragLeaveElem(e) {
+  e.currentTarget.classList.remove('el-drop-before','el-drop-after');
+}
+function elDropOnElem(e, targetRungId, targetElemId) {
+  if (!elDragId) return;
+  e.preventDefault(); e.stopPropagation();
+  e.currentTarget.classList.remove('el-drop-before','el-drop-after');
+  if (elDragId === targetElemId) return;
+  const srcRung = rungs.find(r => r.id === elDragRungId);
+  const dstRung = rungs.find(r => r.id === targetRungId);
+  if (!srcRung || !dstRung) return;
+  normBranches(srcRung); normBranches(dstRung);
+  const srcRef = findInBranches(srcRung, elDragId);
+  if (!srcRef) return;
+  const el = JSON.parse(JSON.stringify(srcRef.el)); // snapshot before removal
+  removeFromCells(srcRef._ref.arr, elDragId);
+  normBranches(dstRung); // re-normalise in case src === dst rung
+  const dstRef = findInBranches(dstRung, targetElemId);
+  if (!dstRef) { dstRung.branches[0].push(el); }
+  else {
+    const before = e.clientX < e.currentTarget.getBoundingClientRect().left + e.currentTarget.getBoundingClientRect().width / 2;
+    dstRef._ref.arr.splice(before ? dstRef._ref.idx : dstRef._ref.idx + 1, 0, el);
+  }
+  elDragId = null; elDragRungId = null;
+  render();
+}
+// Helper used by branch-end drop zones (tbBranchDrop / tbGroupBranchDrop)
+function elDropAppend(dstRungId, section, bi) {
+  if (!elDragId) return;
+  const srcRung = rungs.find(r => r.id === elDragRungId);
+  const dstRung = rungs.find(r => r.id === dstRungId);
+  if (!srcRung || !dstRung) return;
+  normBranches(srcRung); normBranches(dstRung);
+  const srcRef = findInBranches(srcRung, elDragId);
+  if (!srcRef) return;
+  const el = JSON.parse(JSON.stringify(srcRef.el));
+  removeFromCells(srcRef._ref.arr, elDragId);
+  normBranches(dstRung);
+  const arr = section === 'pre' ? dstRung.pre : section === 'post' ? dstRung.post : (dstRung.branches[bi] ?? dstRung.branches[0]);
+  arr.push(el);
+  elDragId = null; elDragRungId = null;
+  render();
 }
 
 // ═══════════════════════════════════════════════════
