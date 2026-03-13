@@ -1,0 +1,8 @@
+name = "laddermind-proxy"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+# After deploying, run:
+#   wrangler secret put OPENAI_KEY
+# and paste your OpenAI API key when prompted.
+# Your Worker URL will be: https://laddermind-proxy.YOUR_SUBDOMAIN.workers.dev
